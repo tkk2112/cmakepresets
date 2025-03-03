@@ -1,0 +1,66 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cmakepresets"
+dynamic = ["version"]
+authors = [{ name = "Thomas Kristensen", email = "thomas@sl.m04r.space" }]
+description = "A library for parsing CMakePresets.json"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICEN[CS]E.*"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: OS Independent",
+]
+keywords = ["cmake", "CMakePresets.json", "presets"]
+dependencies = ["jsonschema>=4.23.0", "requests>=2.32.3", "rich>=13.9.4"]
+
+[project.urls]
+Homepage = "https://github.com/tkk2112/cmakepresets"
+Issues = "https://github.com/tkk2112/cmakepresets/issues"
+Repository = "https://github.com/tkk2112/cmakepresets.git"
+
+[project.scripts]
+cmakepreset = "cmakepresets:cli.main"
+
+[tool.hatch.version]
+path = "src/cmakepresets/__init__.py"
+
+[tool.ruff]
+line-length = 158
+lint.select = ["E", "F", "W", "C90"]
+
+[tool.isort]
+profile = "black"
+line_length = 158
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = ["tests"]
+addopts = "--strict-markers --cov=cmakepresets --cov-branch --cov-report term --cov-report html"
+
+[tool.mypy]
+python_version = "3.11"
+check_untyped_defs = true
+disallow_incomplete_defs = true
+ignore_missing_imports = true
+
+[tool.tomlscript]
+check = "uv run pre-commit run --all-files"
+test = "uv run pytest"
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.1.0",
+    "pytest>=7.0.0",
+    "pyfakefs>=5.7.4",
+    "pytest-cov>=6.0.0",
+    "hatch>=1.14.0",
+    "mypy>=1.15.0",
+    "types-jsonschema>=4.23.0.20241208",
+    "types-requests>=2.32.0.20250306",
+    "tomlscript>=0.2.1",
+]

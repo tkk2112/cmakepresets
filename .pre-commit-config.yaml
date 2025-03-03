@@ -1,0 +1,39 @@
+repos:
+- repo: https://github.com/astral-sh/uv-pre-commit
+  rev: 0.6.5
+  hooks:
+    # Sync all dependencies
+    - id: uv-sync
+      args: ["--locked", "--all-packages"]
+      stages: [post-checkout, post-merge, post-rewrite]
+    # Update the uv lockfile
+    - id: uv-lock
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.9.10
+  hooks:
+    # Run the linter.
+    - id: ruff
+      args: [ --fix ]
+    # Run the formatter.
+    - id: ruff-format
+- repo: https://github.com/PyCQA/isort
+  rev: 6.0.1
+  hooks:
+    - id: isort
+- repo: https://github.com/pre-commit/mirrors-mypy
+  rev: v1.15.0
+  hooks:
+    -   id: mypy
+        args: [--strict]
+        additional_dependencies:
+          - types-requests
+          - types-jsonschema
+- repo: https://github.com/python-jsonschema/check-jsonschema
+  rev: 0.31.3
+  hooks:
+    - id: check-github-workflows
+    - id: check-renovate
+- repo: https://github.com/renovatebot/pre-commit-hooks
+  rev: 39.185.0
+  hooks:
+    - id: renovate-config-validator

@@ -1,0 +1,380 @@
+import pytest
+from pyfakefs.fake_filesystem_unittest import Patcher
+
+from cmakepresets.presets import CMakePresets
+
+from .decorators import CMakePresets_json
+
+
+@CMakePresets_json('{"version": 4, "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0}}')
+def test_initialize_with_file_path() -> None:
+    """Test initialization with a file path."""
+    presets = CMakePresets("CMakePresets.json")
+    assert isinstance(presets, CMakePresets)
+
+
+@CMakePresets_json('{"version": 4, "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0}}')
+def test_initialize_with_directory_path() -> None:
+    """Test initialization with a directory path."""
+    # With pyfakefs, the current directory contains our preset file
+    presets = CMakePresets(".")
+    assert isinstance(presets, CMakePresets)
+
+
+def test_initialize_missing_file() -> None:
+    """Test initialization with a missing file raises FileNotFoundError."""
+    with Patcher():
+        with pytest.raises(FileNotFoundError):
+            CMakePresets("non_existent_file.json")
+
+
+@CMakePresets_json("""
+{
+    "version": 4,
+    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+    "configurePresets": [
+        {"name": "default", "generator": "Ninja"},
+        {"name": "debug", "generator": "Ninja", "binaryDir": "${sourceDir}/build/debug"}
+    ]
+}
+""")
+def test_get_configure_presets() -> None:
+    """Test retrieving configure presets."""
+    presets = CMakePresets("CMakePresets.json")
+    configure_presets = presets.get_configure_presets()
+    assert len(configure_presets) == 2
+    assert configure_presets[0]["name"] == "default"
+    assert configure_presets[1]["name"] == "debug"
+
+    # Test the property accessor too
+    assert presets.configure_presets == configure_presets
+
+
+@CMakePresets_json("""
+{
+    "version": 4,
+    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+    "buildPresets": [
+        {"name": "release-build", "configurePreset": "release"},
+        {"name": "debug-build", "configurePreset": "debug"}
+    ]
+}
+""")
+def test_get_build_presets() -> None:
+    """Test retrieving build presets."""
+    presets = CMakePresets("CMakePresets.json")
+    build_presets = presets.get_build_presets()
+    assert len(build_presets) == 2
+    assert build_presets[0]["name"] == "release-build"
+    assert build_presets[1]["name"] == "debug-build"
+
+    # Test the property accessor too
+    assert presets.build_presets == build_presets
+
+
+@CMakePresets_json("""
+{
+    "version": 4,
+    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+    "testPresets": [
+        {"name": "unit-tests", "configurePreset": "debug"},
+        {"name": "integration-tests", "configurePreset": "release"}
+    ]
+}
+""")
+def test_get_test_presets() -> None:
+    """Test retrieving test presets."""
+    presets = CMakePresets("CMakePresets.json")
+    test_presets = presets.get_test_presets()
+    assert len(test_presets) == 2
+    assert test_presets[0]["name"] == "unit-tests"
+    assert test_presets[1]["name"] == "integration-tests"
+
+    # Test the property accessor too
+    assert presets.test_presets == test_presets
+
+
+@CMakePresets_json("""
+{
+    "version": 6,
+    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+    "packagePresets": [
+        {"name": "deb-package", "configurePreset": "release"},
+        {"name": "rpm-package", "configurePreset": "release"}
+    ]
+}
+""")
+def test_get_package_presets() -> None:
+    """Test retrieving package presets."""
+    presets = CMakePresets("CMakePresets.json")
+    package_presets = presets.get_package_presets()
+    assert len(package_presets) == 2
+    assert package_presets[0]["name"] == "deb-package"
+    assert package_presets[1]["name"] == "rpm-package"
+
+    # Test the property accessor too
+    assert presets.package_presets == package_presets
+
+
+@CMakePresets_json("""
+{
+    "version": 6,
+    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+    "workflowPresets": [
+        {"name": "ci-workflow", "steps": [{"type": "configure", "name": "default"}]},
+        {"name": "release-workflow", "steps": [{"type": "configure", "name": "release"}]}
+    ]
+}
+""")
+def test_get_workflow_presets() -> None:
+    """Test retrieving workflow presets."""
+    presets = CMakePresets("CMakePresets.json")
+    workflow_presets = presets.get_workflow_presets()
+    assert len(workflow_presets) == 2
+    assert workflow_presets[0]["name"] == "ci-workflow"
+    assert workflow_presets[1]["name"] == "release-workflow"
+
+    # Test the property accessor too
+    assert presets.workflow_presets == workflow_presets
+
+
+@CMakePresets_json("""
+{
+    "version": 4,
+    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+    "configurePresets": [{"name": "default", "generator": "Ninja"}],
+    "buildPresets": [{"name": "release-build", "configurePreset": "release"}],
+    "testPresets": [{"name": "unit-tests", "configurePreset": "debug"}]
+}
+""")
+def test_get_preset_by_name() -> None:
+    """Test getting a preset by its specific type and name."""
+    presets = CMakePresets("CMakePresets.json")
+
+    # Find existing preset
+    configure_preset = presets.get_preset_by_name("configure", "default")
+    assert configure_preset is not None
+    assert configure_preset["name"] == "default"
+
+    # Find non-existent preset
+    nonexistent = presets.get_preset_by_name("build", "nonexistent")
+    assert nonexistent is None
+
+
+@CMakePresets_json("""
+{
+    "version": 4,
+    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+    "configurePresets": [{"name": "default", "generator": "Ninja"}],
+    "buildPresets": [{"name": "release-build", "configurePreset": "release"}],
+    "testPresets": [{"name": "unit-tests", "configurePreset": "debug"}]
+}
+""")
+def test_find_preset() -> None:
+    """Test finding a preset by name across all preset types."""
+    presets = CMakePresets("CMakePresets.json")
+
+    # Find preset in configurePresets
+    default_preset = presets.find_preset("default")
+    assert default_preset is not None
+    assert default_preset["name"] == "default"
+
+    # Find preset in testPresets
+    test_preset = presets.find_preset("unit-tests")
+    assert test_preset is not None
+    assert test_preset["name"] == "unit-tests"
+
+    # Try to find non-existent preset
+    nonexistent = presets.find_preset("nonexistent")
+    assert nonexistent is None
+
+
+@CMakePresets_json(
+    {
+        "CMakePresets.json": """
+    {
+        "version": 4,
+        "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+        "configurePresets": [{"name": "base", "generator": "Ninja"}],
+        "include": ["nested/more_presets.json"]
+    }
+    """,
+        "nested/more_presets.json": """
+    {
+        "version": 4,
+        "configurePresets": [{"name": "nested", "generator": "Ninja"}],
+        "buildPresets": [{"name": "nested-build", "configurePreset": "nested"}]
+    }
+    """,
+    }
+)
+def test_presets_with_includes() -> None:
+    """Test that presets from included files are also retrieved."""
+    presets = CMakePresets("CMakePresets.json")
+
+    # Should have presets from both files
+    configure_presets = presets.get_configure_presets()
+    assert len(configure_presets) == 2
+    assert any(preset["name"] == "base" for preset in configure_presets)
+    assert any(preset["name"] == "nested" for preset in configure_presets)
+
+    # Should have build presets from the included file
+    build_presets = presets.get_build_presets()
+    assert len(build_presets) == 1
+    assert build_presets[0]["name"] == "nested-build"
+
+
+@CMakePresets_json(
+    {
+        "CMakePresets.json": """
+    {
+        "version": 4,
+        "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+        "configurePresets": [{"name": "base", "generator": "Ninja"}]
+    }
+    """,
+        "CMakeUserPresets.json": """
+    {
+        "version": 4,
+        "configurePresets": [{"name": "user", "generator": "Ninja"}]
+    }
+    """,
+    }
+)
+def test_user_presets_are_included() -> None:
+    """Test that CMakeUserPresets.json is automatically included."""
+    presets = CMakePresets("CMakePresets.json")
+
+    # Should have presets from both files
+    configure_presets = presets.get_configure_presets()
+    assert len(configure_presets) == 2
+    assert any(preset["name"] == "base" for preset in configure_presets)
+    assert any(preset["name"] == "user" for preset in configure_presets)
+
+
+@CMakePresets_json("""
+{
+    "version": 4,
+    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+    "configurePresets": [
+        {"name": "base", "generator": "Ninja", "cacheVariables": {"VAR1": "base_value"}},
+        {"name": "debug", "inherits": "base", "cacheVariables": {"VAR2": "debug_value"}}
+    ],
+    "buildPresets": [
+        {"name": "base-build", "configurePreset": "base"},
+        {"name": "debug-build", "configurePreset": "debug"}
+    ],
+    "testPresets": [
+        {"name": "base-test", "configurePreset": "base"},
+        {"name": "debug-test", "configurePreset": "debug"}
+    ]
+}
+""")
+def test_get_preset_inheritance_chain() -> None:
+    """Test retrieving the inheritance chain for a preset."""
+    presets = CMakePresets("CMakePresets.json")
+
+    # Test inheritance chain for debug preset which inherits from base
+    chain = presets.get_preset_inheritance_chain("configure", "debug")
+    assert len(chain) == 1
+    assert chain[0]["name"] == "base"
+
+    # Test preset with no inheritance
+    chain = presets.get_preset_inheritance_chain("configure", "base")
+    assert len(chain) == 0
+
+
+@CMakePresets_json("""
+{
+    "version": 4,
+    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+    "configurePresets": [
+        {"name": "base", "generator": "Ninja", "cacheVariables": {"VAR1": "base_value"}},
+        {"name": "debug", "inherits": "base", "cacheVariables": {"VAR2": "debug_value", "VAR1": "overridden_value"}},
+        {"name": "extended", "inherits": "debug", "cacheVariables": {"VAR3": "extended_value"}}
+    ]
+}
+""")
+def test_flatten_preset() -> None:
+    """Test flattening a preset with inheritance."""
+    presets = CMakePresets("CMakePresets.json")
+
+    # Test flattening a preset with multiple levels of inheritance
+    flattened = presets.flatten_preset("configure", "extended")
+    assert flattened["name"] == "extended"
+    assert flattened["generator"] == "Ninja"
+    assert flattened["cacheVariables"]["VAR1"] == "overridden_value"  # Should use overridden value
+    assert flattened["cacheVariables"]["VAR2"] == "debug_value"
+    assert flattened["cacheVariables"]["VAR3"] == "extended_value"
+
+    # Ensure inherits is not in the flattened preset
+    assert "inherits" not in flattened
+
+
+@CMakePresets_json("""
+{
+    "version": 4,
+    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+    "configurePresets": [
+        {"name": "base", "generator": "Ninja"},
+        {"name": "debug", "generator": "Ninja"}
+    ],
+    "buildPresets": [
+        {"name": "base-build", "configurePreset": "base"},
+        {"name": "debug-build", "configurePreset": "debug"}
+    ],
+    "testPresets": [
+        {"name": "base-test", "configurePreset": "base"},
+        {"name": "debug-test", "configurePreset": "debug"}
+    ]
+}
+""")
+def test_get_dependent_presets() -> None:
+    """Test getting presets dependent on a specific preset."""
+    presets = CMakePresets("CMakePresets.json")
+
+    dependents = presets.get_dependent_presets("configure", "base")
+    assert len(dependents["buildPresets"]) == 1
+    assert dependents["buildPresets"][0]["name"] == "base-build"
+    assert len(dependents["testPresets"]) == 1
+    assert dependents["testPresets"][0]["name"] == "base-test"
+
+
+@CMakePresets_json("""
+{
+    "version": 4,
+    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+    "configurePresets": [
+        {"name": "base", "generator": "Ninja"}
+    ],
+    "buildPresets": [
+        {"name": "direct-build", "configurePreset": "base"},
+        {"name": "parent-build", "configurePreset": "base"},
+        {"name": "inherited-build", "inherits": "parent-build"}
+    ],
+    "testPresets": [
+        {"name": "direct-test", "configurePreset": "base"},
+        {"name": "parent-test", "configurePreset": "base"},
+        {"name": "inherited-test", "inherits": "parent-test"}
+    ]
+}
+""")
+def test_get_dependent_presets_with_inheritance() -> None:
+    """Test getting presets dependent on a configure preset through inheritance."""
+    presets = CMakePresets("CMakePresets.json")
+
+    dependents = presets.get_dependent_presets("configure", "base")
+
+    # Check build presets
+    assert len(dependents["buildPresets"]) == 3
+    build_names = [preset["name"] for preset in dependents["buildPresets"]]
+    assert "direct-build" in build_names
+    assert "parent-build" in build_names
+    assert "inherited-build" in build_names
+
+    # Check test presets
+    assert len(dependents["testPresets"]) == 3
+    test_names = [preset["name"] for preset in dependents["testPresets"]]
+    assert "direct-test" in test_names
+    assert "parent-test" in test_names
+    assert "inherited-test" in test_names
