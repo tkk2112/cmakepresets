@@ -1,0 +1,12 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+      "github>tkk2112/renovate"
+  ],
+  "hostRules": [
+      {
+          "matchHost": "github.com",
+          "token": " ${{ secrets.RENOVATE_TOKEN }}"
+      }
+  ]
+}
