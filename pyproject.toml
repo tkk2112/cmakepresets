@@ -8,6 +8,7 @@ dynamic = ["version"]
 authors = [{ name = "Thomas Kristensen", email = "thomas@sl.m04r.space" }]
 description = "A library for parsing CMakePresets.json"
 requires-python = ">=3.11"
+readme = "README.md"
 license = "MIT"
 license-files = ["LICEN[CS]E.*"]
 classifiers = [
