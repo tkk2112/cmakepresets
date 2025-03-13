@@ -204,10 +204,11 @@ class CMakePresets:
             preset_name: Name of the preset
 
         Returns:
-            Dict with all inherited values resolved
+            Dict with all inherited properties flattened
         """
         preset = self.get_preset_by_name(preset_type, preset_name)
         if not preset:
+            logger.warning(f"Could not find preset '{preset_name}' of type '{preset_type}'")
             return {}
 
         # Start with the base preset
@@ -216,21 +217,31 @@ class CMakePresets:
 
         # Merge all presets in the chain
         flattened: Dict[str, Any] = {}
+
+        # Properties that should never be inherited from parent presets
+        non_inheritable_properties = ["inherits", "hidden"]
+
         for p in chain:
-            # Deep copy any dictionaries to avoid modifying originals
             p_copy = {}
             for key, value in p.items():
-                if key != "inherits":  # Skip inherits field
-                    if isinstance(value, dict):
-                        if key in flattened and isinstance(flattened[key], dict):
-                            # Merge dictionaries for nested values
-                            merged = flattened[key].copy()
-                            merged.update(value)
-                            p_copy[key] = merged
-                        else:
-                            p_copy[key] = value.copy()
+                # Skip properties that should not be inherited from parents
+                if key in non_inheritable_properties and p != chain[-1]:
+                    continue
+
+                # Skip inherits property entirely - it's not useful in a flattened preset
+                if key == "inherits":
+                    continue
+
+                if isinstance(value, dict):
+                    if key in flattened and isinstance(flattened[key], dict):
+                        # Merge dictionaries for nested values
+                        merged = flattened[key].copy()
+                        merged.update(value)
+                        p_copy[key] = merged
                     else:
-                        p_copy[key] = value
+                        p_copy[key] = value.copy()
+                else:
+                    p_copy[key] = value
             flattened.update(p_copy)
 
         return flattened

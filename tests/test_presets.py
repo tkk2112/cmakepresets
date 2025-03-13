@@ -378,3 +378,36 @@ def test_get_dependent_presets_with_inheritance() -> None:
     assert "direct-test" in test_names
     assert "parent-test" in test_names
     assert "inherited-test" in test_names
+
+
+@CMakePresets_json("""
+{
+    "version": 4,
+    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+    "configurePresets": [
+        {"name": "base", "generator": "Ninja", "cacheVariables": {"VAR1": "base_value"}, "hidden": true},
+        {"name": "debug", "inherits": "base", "cacheVariables": {"VAR2": "debug_value", "VAR1": "overridden_value"}},
+        {"name": "extended", "inherits": "debug", "cacheVariables": {"VAR3": "extended_value"}, "hidden": true}
+    ]
+}
+""")
+def test_hidden_not_inherited_when_flattening() -> None:
+    """Test that hidden property is not inherited when flattening presets."""
+    presets = CMakePresets("CMakePresets.json")
+
+    # Base preset is marked as hidden
+    base = presets.get_preset_by_name("configure", "base")
+    assert base is not None  # Make sure base is not None before indexing
+    assert base["hidden"] is True
+
+    # Debug preset inherits from base but should not inherit hidden property
+    flattened_debug = presets.flatten_preset("configure", "debug")
+    assert "hidden" not in flattened_debug
+
+    # Extended preset explicitly sets hidden=true
+    flattened_extended = presets.flatten_preset("configure", "extended")
+    assert flattened_extended["hidden"] is True
+
+    # Check that non-hidden properties are still inherited properly
+    assert flattened_debug["generator"] == "Ninja"
+    assert flattened_debug["cacheVariables"]["VAR1"] == "overridden_value"
