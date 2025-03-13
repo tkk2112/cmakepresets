@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -25,3 +25,17 @@ jobs:
       - run: uv sync --all-packages
       - run: uv run tom check
       - run: uv run tom test
+
+  test:
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    name: test
+    needs: build
+    steps:
+      - shell: python
+        run: |
+          import sys
+          if all(result == "success" for result in ${{ toJSON(needs.*.result) }}):
+            sys.exit(0)
+          else:
+            sys.exit(1)
