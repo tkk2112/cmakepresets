@@ -411,3 +411,59 @@ def test_hidden_not_inherited_when_flattening() -> None:
     # Check that non-hidden properties are still inherited properly
     assert flattened_debug["generator"] == "Ninja"
     assert flattened_debug["cacheVariables"]["VAR1"] == "overridden_value"
+    assert flattened_debug["cacheVariables"]["VAR2"] == "debug_value"
+    assert flattened_extended["cacheVariables"]["VAR3"] == "extended_value"
+
+
+@CMakePresets_json("""
+{
+    "version": 6,
+    "cmakeMinimumRequired": {"major": 3, "minor": 28, "patch": 0},
+    "configurePresets": [
+        {"name": "base", "generator": "Ninja"},
+        {"name": "debug", "generator": "Ninja"},
+        {"name": "empty", "generator": "Ninja"}
+    ],
+    "buildPresets": [
+        {"name": "base-build", "configurePreset": "base"},
+        {"name": "debug-build", "configurePreset": "debug"},
+        {"name": "another-build", "configurePreset": "base"}
+    ],
+    "testPresets": [
+        {"name": "base-test", "configurePreset": "base"},
+        {"name": "debug-test", "configurePreset": "debug"}
+    ],
+    "packagePresets": [
+        {"name": "base-package", "configurePreset": "base"},
+        {"name": "hidden-package", "configurePreset": "base", "hidden": true}
+    ]
+}
+""")
+def test_find_related_presets() -> None:
+    """Test finding presets related to a specific configure preset."""
+    presets = CMakePresets("CMakePresets.json")
+
+    # Test finding all related presets
+    related = presets.find_related_presets("base")
+    assert related is not None
+    assert len(related["build"]) == 2
+    assert len(related["test"]) == 1
+    assert len(related["package"]) == 2
+
+    # Test finding only build presets
+    build_related = presets.find_related_presets("base", "build")
+    assert build_related is not None
+    assert "build" in build_related
+    assert len(build_related["build"]) == 2
+    assert list(build_related.keys()) == ["build"]
+
+    # Test finding related presets for a preset with no dependents
+    empty_related = presets.find_related_presets("empty")
+    assert empty_related is not None
+    assert len(empty_related["build"]) == 0
+    assert len(empty_related["test"]) == 0
+    assert len(empty_related["package"]) == 0
+
+    # Test nonexistent preset
+    nonexistent_related = presets.find_related_presets("nonexistent")
+    assert nonexistent_related is None

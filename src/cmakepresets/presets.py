@@ -298,3 +298,42 @@ class CMakePresets:
                 tree[name] = {"preset": configure_preset, "dependents": dependent_presets}
 
         return tree
+
+    def find_related_presets(self, configure_preset_name: str, preset_type: Optional[str] = None) -> Optional[Dict[str, List[Dict[str, Any]]]]:
+        """
+        Find presets related to a specific configure preset.
+
+        Args:
+            configure_preset_name: Name of the configure preset to find related presets for
+            preset_type: Optional type filter ('build', 'test', 'package')
+
+        Returns:
+            Dictionary of related presets by type or None if preset not found
+        """
+        # Get the preset tree (contains relationship data)
+        preset_tree = self.get_preset_tree()
+
+        # Check if the configure preset exists
+        if configure_preset_name not in preset_tree:
+            logger.warning(f"Configure preset '{configure_preset_name}' not found")
+            return None
+
+        # Get the related presets data
+        related_data = preset_tree[configure_preset_name]
+
+        # Get the dependent presets
+        dependent_presets = related_data["dependents"]
+
+        # Filter by type if specified
+        if preset_type:
+            preset_key = f"{preset_type}Presets"
+            if preset_key in dependent_presets:
+                return {preset_type: dependent_presets[preset_key]}
+            return {preset_type: []}
+
+        # Return all related presets (build, test, package)
+        return {
+            "build": dependent_presets.get("buildPresets", []),
+            "test": dependent_presets.get("testPresets", []),
+            "package": dependent_presets.get("packagePresets", []),
+        }

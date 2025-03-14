@@ -34,7 +34,7 @@ def create_parser() -> argparse.ArgumentParser:
     # List command
     list_parser = subparsers.add_parser("list", help="List all presets with optional filtering")
     list_parser.add_argument(
-        "--type", "-t", choices=["configure", "build", "test", "package", "workflow", "all"], default="all", help="Type of presets to list (default: all)"
+        "--type", "-t", choices=["configure", "build", "test", "package", "workflow"], default="all", help="Type of presets to list (default: all)"
     )
     list_parser.add_argument("--show-hidden", action="store_true", help="Show hidden presets")
     list_parser.add_argument("--flat", action="store_true", help="Show flat list without relationships")
@@ -49,9 +49,7 @@ def create_parser() -> argparse.ArgumentParser:
     # Related command
     related_parser = subparsers.add_parser("related", help="Show presets related to a specific configure preset")
     related_parser.add_argument("configure_preset", help="Name of the configure preset")
-    related_parser.add_argument(
-        "--type", "-t", choices=["build", "test", "package", "all"], default="all", help="Type of related presets to show (default: all)"
-    )
+    related_parser.add_argument("--type", "-t", choices=["build", "test", "package"], default="all", help="Type of related presets to show (default: all)")
     related_parser.add_argument("--show-hidden", action="store_true", help="Show hidden presets")
     related_parser.add_argument("--plain", "-p", action="store_true", help="Output in a simple format suitable for parsing in scripts")
 
@@ -533,29 +531,17 @@ def _add_simple_property(table: Table, key: str, value: Any, source: str, indent
 
 
 # Helper functions for the "related" command
-def _get_configure_preset(presets: CMakePresets, preset_name: str, show_error: bool = True) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
-    """Get a configure preset and its related presets data.
+def _get_configure_preset(presets: CMakePresets, preset_name: str, show_error: bool = True) -> Optional[Dict[str, Any]]:
+    """Get a configure preset.
 
     Returns:
-        Tuple of (configure_preset, related_data) or (None, None) if not found
+        Configure preset or None if not found
     """
     # Find the configure preset
     configure_preset = presets.get_preset_by_name("configure", preset_name)
-    if not configure_preset:
-        if show_error:
-            console.print(f"[bold red]Error:[/bold red] Configure preset '{preset_name}' not found")
-        return None, None
-
-    # Get the preset tree
-    preset_tree = presets.get_preset_tree()
-    if not preset_tree or preset_name not in preset_tree:
-        if show_error:
-            console.print(f"[bold red]Error:[/bold red] No presets found related to '{preset_name}'")
-        return None, None
-
-    # Get presets related to this configure preset
-    related_data = preset_tree[preset_name]
-    return configure_preset, related_data
+    if not configure_preset and show_error:
+        console.print(f"[bold red]Error:[/bold red] Configure preset '{preset_name}' not found")
+    return configure_preset
 
 
 def _filter_presets_by_visibility(presets_list: List[Dict[str, Any]], show_hidden: bool) -> List[Dict[str, Any]]:
@@ -576,25 +562,15 @@ def _filter_presets_by_visibility(presets_list: List[Dict[str, Any]], show_hidde
     return result
 
 
-def _get_preset_types_to_display(preset_type: str) -> List[Tuple[str, str]]:
-    """Get the list of preset types to display based on the filter type."""
-    if preset_type == "all":
-        return [("buildPresets", "build"), ("testPresets", "test"), ("packagePresets", "package")]
-    elif preset_type in ["build", "test", "package"]:
-        preset_key = f"{preset_type}Presets"
-        return [(preset_key, preset_type)]
-    return []
-
-
 def _print_rich_related_output(
-    configure_preset_name: str, related_data: Dict[str, Any], preset_types_to_display: List[Tuple[str, str]], show_hidden: bool
+    configure_preset_name: str, related_presets: Dict[str, List[Dict[str, Any]]], preset_types: List[str], show_hidden: bool
 ) -> bool:
     """Print rich formatted output for related presets. Returns True if any presets were found."""
     console.print(f"Presets related to configurePreset: [bold green]{configure_preset_name}[/bold green]")
 
     found_any = False
-    for preset_key, preset_type_name in preset_types_to_display:
-        presets_list = related_data["dependents"].get(preset_key, [])
+    for preset_type in preset_types:
+        presets_list = related_presets.get(preset_type, [])
 
         # Filter based on visibility
         filtered_presets = _filter_presets_by_visibility(presets_list, show_hidden)
@@ -603,42 +579,34 @@ def _print_rich_related_output(
             found_any = True
             preset_names = [p.get("name", "Unnamed") for p in filtered_presets]
             plural = "s" if len(preset_names) > 1 else ""
-            console.print(f"{preset_type_name}Preset{plural}: [green]{', '.join(preset_names)}[/green]")
+            console.print(f"{preset_type}Preset{plural}: [green]{', '.join(preset_names)}[/green]")
         else:
             # Only show empty types if explicitly requested
-            console.print(f"{preset_type_name}Preset: [dim]none[/dim]")
+            console.print(f"{preset_type}Preset: [dim]none[/dim]")
 
     return found_any
 
 
-def _get_available_preset_types(related_data: Dict[str, Any], show_hidden: bool) -> List[str]:
+def _get_available_preset_types(related_presets: Dict[str, List[Dict[str, Any]]], show_hidden: bool) -> List[str]:
     """Get a list of available preset types that have at least one preset."""
     available_types = []
 
-    type_mappings = [("buildPresets", "build"), ("testPresets", "test"), ("packagePresets", "package")]
-
-    for preset_key, type_name in type_mappings:
-        presets_list = related_data["dependents"].get(preset_key, [])
+    for preset_type in ["build", "test", "package"]:
+        presets_list = related_presets.get(preset_type, [])
         if not presets_list:
             continue
 
         # Filter based on visibility
         filtered_presets = [p for p in presets_list if show_hidden or not p.get("hidden", False)]
         if filtered_presets:
-            available_types.append(type_name)
+            available_types.append(preset_type)
 
     return available_types
 
 
-def _get_preset_names_for_type(related_data: Dict[str, Any], preset_type: str, show_hidden: bool) -> List[str]:
+def _get_preset_names_for_type(related_presets: Dict[str, List[Dict[str, Any]]], preset_type: str, show_hidden: bool) -> List[str]:
     """Get preset names for a specific preset type."""
-    preset_key_map = {"build": "buildPresets", "test": "testPresets", "package": "packagePresets"}
-
-    preset_key = preset_key_map.get(preset_type)
-    if not preset_key:
-        return []
-
-    presets_list = related_data["dependents"].get(preset_key, [])
+    presets_list = related_presets.get(preset_type, [])
 
     # Filter based on visibility
     filtered_presets = [p for p in presets_list if show_hidden or not p.get("hidden", False)]
@@ -648,18 +616,18 @@ def _get_preset_names_for_type(related_data: Dict[str, Any], preset_type: str, s
 
 
 # Simplified handler functions
-def _handle_plain_output(args: argparse.Namespace, related_data: Dict[str, Any]) -> int:
+def _handle_related_plain_output(args: argparse.Namespace, related_presets: Dict[str, List[Dict[str, Any]]]) -> int:
     """Handle plain output mode for scripts."""
     if args.type == "all":
         # Get available types and print them
-        available_types = _get_available_preset_types(related_data, args.show_hidden)
+        available_types = _get_available_preset_types(related_presets, args.show_hidden)
         if available_types:
             print(" ".join(available_types))
             return 0
         return 1
     else:
         # Get preset names for the specific type
-        preset_names = _get_preset_names_for_type(related_data, args.type, args.show_hidden)
+        preset_names = _get_preset_names_for_type(related_presets, args.type, args.show_hidden)
         if preset_names:
             print(" ".join(preset_names))
             return 0
@@ -668,21 +636,24 @@ def _handle_plain_output(args: argparse.Namespace, related_data: Dict[str, Any])
 
 def handle_related_command(presets: CMakePresets, args: argparse.Namespace) -> int:
     """Handle the 'related' command to show presets related to a specific configure preset."""
-    # Get the configure preset and related data
-    configure_preset, related_data = _get_configure_preset(presets, args.configure_preset, show_error=not args.plain)
+    # Use the find_related_presets method to get related presets
+    preset_type = None if args.type == "all" else args.type
+    related_presets = presets.find_related_presets(args.configure_preset, preset_type)
 
-    if not configure_preset or not related_data:
-        return 1  # Error already printed if not in plain mode
+    if related_presets is None:
+        if not args.plain:
+            console.print(f"[bold red]Error:[/bold red] Configure preset '{args.configure_preset}' not found")
+        return 1
 
     # Handle plain output mode for scripts
     if args.plain:
-        return _handle_plain_output(args, related_data)
+        return _handle_related_plain_output(args, related_presets)
 
     # Get preset types to display based on filter
-    preset_types_to_display = _get_preset_types_to_display(args.type)
+    preset_types_to_display = [preset_type] if preset_type in ["build", "test", "package"] else ["build", "test", "package"]
 
     # Print rich formatted output
-    found_any = _print_rich_related_output(args.configure_preset, related_data, preset_types_to_display, args.show_hidden)
+    found_any = _print_rich_related_output(args.configure_preset, related_presets, preset_types_to_display, args.show_hidden)
 
     # Error if the user specified a type that doesn't exist for this preset
     if args.type != "all" and not found_any:
