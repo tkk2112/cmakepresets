@@ -9,7 +9,7 @@ repos:
     # Update the uv lockfile
     - id: uv-lock
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.10.0
+  rev: v0.11.0
   hooks:
     # Run the linter.
     - id: ruff
