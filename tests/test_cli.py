@@ -119,161 +119,299 @@ def test_filter_presets() -> None:
     assert len(filtered) == 2
 
 
-def test_handle_list_command_flat(mock_presets: MagicMock, mock_console_print: MagicMock) -> None:
+@CMakePresets_json("""
+{
+    "version": 4,
+    "cmakeMinimumRequired": {"major": 3, "minor": 28, "patch": 0},
+    "configurePresets": [
+        {"name": "default", "generator": "Ninja"},
+        {"name": "debug", "generator": "Ninja"},
+        {"name": "hidden-preset", "generator": "Ninja", "hidden": true}
+    ],
+    "buildPresets": [
+        {"name": "default-build", "configurePreset": "default"},
+        {"name": "debug-build", "configurePreset": "debug"}
+    ],
+    "testPresets": [
+        {"name": "default-test", "configurePreset": "default"}
+    ]
+}
+""")
+def test_handle_list_command_flat(mock_console_print: MagicMock) -> None:
     """Test the list command with flat output."""
-    args = argparse.Namespace(flat=True, type="configure", show_hidden=False)
+    args = argparse.Namespace(file="CMakePresets.json", directory=None, command="list", type="configure", show_hidden=False, flat=True, verbose=10)
 
-    result = cli.handle_list_command(mock_presets, args)
+    with patch("sys.argv", ["cmakepresets", "-vvvv", "list", "--type", "configure", "--flat"]):
+        with patch("argparse.ArgumentParser.parse_args", return_value=args):
+            result = cli.main()
 
-    assert result == 0
-    mock_console_print.assert_called()
+            assert result == 0
+            mock_console_print.assert_called()
 
-    # Check at least one call contains the preset name
-    any_call_contains_name = any("default" in str(call) for call in mock_console_print.call_args_list)
-    assert any_call_contains_name
+            # Check output contains preset names
+            output_text = " ".join(str(call) for call in mock_console_print.call_args_list)
+            assert "default" in output_text
+            assert "debug" in output_text
+            assert "hidden-preset" not in output_text
 
 
-def test_handle_list_command_tabular(mock_presets: MagicMock, mock_console_print: MagicMock) -> None:
+@CMakePresets_json("""
+{
+    "version": 4,
+    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+    "configurePresets": [
+        {"name": "default", "generator": "Ninja"},
+        {"name": "debug", "generator": "Ninja"}
+    ],
+    "buildPresets": [
+        {"name": "default-build", "configurePreset": "default"},
+        {"name": "debug-build", "configurePreset": "debug"}
+    ],
+    "testPresets": [
+        {"name": "default-test", "configurePreset": "default"}
+    ]
+}
+""")
+def test_handle_list_command_tabular(mock_console_print: MagicMock) -> None:
     """Test the list command with tabular output."""
-    args = argparse.Namespace(flat=False, type="all", show_hidden=False)
+    args = argparse.Namespace(file="CMakePresets.json", directory=None, command="list", type="all", show_hidden=False, flat=False, verbose=0)
 
-    result = cli.handle_list_command(mock_presets, args)
+    with patch("sys.argv", ["cmakepresets", "list", "--type", "all"]):
+        with patch("argparse.ArgumentParser.parse_args", return_value=args):
+            result = cli.main()
 
-    assert result == 0
-    mock_console_print.assert_called_once()
+            assert result == 0
+            mock_console_print.assert_called()
 
-    # First argument should be a table
-    table_arg = mock_console_print.call_args[0][0]
-    assert isinstance(table_arg, Table)
+            # First argument should be a table
+            table_arg = mock_console_print.call_args[0][0]
+            assert isinstance(table_arg, Table)
 
 
-def test_handle_show_command(mock_presets: MagicMock, mock_console_print: MagicMock) -> None:
+@CMakePresets_json("""
+{
+    "version": 4,
+    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+    "configurePresets": [
+        {"name": "default", "generator": "Ninja", "cacheVariables": {"CMAKE_BUILD_TYPE": "Debug"}}
+    ]
+}
+""")
+def test_handle_show_command(mock_console_print: MagicMock) -> None:
     """Test the show command."""
-    # Mock flatten_preset to return a simple dict
-    mock_presets.flatten_preset.return_value = {"name": "default", "generator": "Ninja", "cacheVariables": {"CMAKE_BUILD_TYPE": "Debug"}}
+    # Test with standard output
+    args = argparse.Namespace(
+        file="CMakePresets.json", directory=None, command="show", preset_name="default", type="configure", json=False, flatten=False, verbose=0
+    )
 
-    # Test with found preset
-    args = argparse.Namespace(preset_name="default", type="configure", json=False, flatten=False)
-    result = cli.handle_show_command(mock_presets, args)
+    with patch("sys.argv", ["cmakepresets", "show", "default", "--type", "configure"]):
+        with patch("argparse.ArgumentParser.parse_args", return_value=args):
+            result = cli.main()
 
-    assert result == 0
-    mock_console_print.assert_called()
+            assert result == 0
+            mock_console_print.assert_called()
 
-    # Test with JSON output
-    mock_console_print.reset_mock()
-    args = argparse.Namespace(preset_name="default", type="configure", json=True, flatten=False)
-    result = cli.handle_show_command(mock_presets, args)
+            # Reset for next test
+            mock_console_print.reset_mock()
 
-    assert result == 0
-    # Verify JSON was printed
-    call_arg = mock_console_print.call_args[0][0]
-    # Should be valid JSON string
-    parsed = json.loads(call_arg)
-    assert parsed["name"] == "default"
-
-
-def test_handle_show_command_not_found(mock_presets: MagicMock, mock_console_print: MagicMock) -> None:
-    """Test the show command with non-existent preset."""
-    args = argparse.Namespace(preset_name="nonexistent", type=None, json=False, flatten=False)
-
-    # Ensure get_preset_by_name returns None for all preset types
-    mock_presets.get_preset_by_name.return_value = None
-
-    result = cli.handle_show_command(mock_presets, args)
-
-    assert result == 1
-    mock_console_print.assert_called_once()
-    # Check error message contains preset name
-    error_msg = mock_console_print.call_args[0][0]
-    assert "nonexistent" in str(error_msg)
-    assert "Error" in str(error_msg)
-
-
-def test_handle_related_command(mock_presets: MagicMock, mock_console_print: MagicMock) -> None:
-    """Test the related command."""
-    args = argparse.Namespace(configure_preset="default", type="all", show_hidden=False, plain=False)
-
-    result = cli.handle_related_command(mock_presets, args)
-
-    assert result == 0
-    mock_console_print.assert_called()
-
-    # Test with specific type
-    mock_console_print.reset_mock()
-    args = argparse.Namespace(configure_preset="default", type="build", show_hidden=False, plain=False)
-
-    result = cli.handle_related_command(mock_presets, args)
-
-    assert result == 0
-    mock_console_print.assert_called()
-
-
-def test_handle_related_command_plain_output(mock_presets: MagicMock) -> None:
-    """Test the related command with plain output for scripts."""
-    args = argparse.Namespace(configure_preset="default", type="all", show_hidden=False, plain=True)
-
-    with patch("builtins.print") as mock_print:
-        result = cli.handle_related_command(mock_presets, args)
-
-        assert result == 0
-        mock_print.assert_called_once()
-        # Should print available types
-        assert "build test" in mock_print.call_args[0][0] or "test build" in mock_print.call_args[0][0]
-
-
-def test_handle_related_command_not_found(mock_presets: MagicMock, mock_console_print: MagicMock) -> None:
-    """Test the related command with non-existent configure preset."""
-    args = argparse.Namespace(configure_preset="nonexistent", type="all", show_hidden=False, plain=False)
-
-    # Ensure get_preset_by_name returns None
-    mock_presets.get_preset_by_name.return_value = None
-
-    result = cli.handle_related_command(mock_presets, args)
-
-    assert result == 1
-    mock_console_print.assert_called_once()
-    # Check error message contains preset name
-    error_msg = mock_console_print.call_args[0][0]
-    assert "nonexistent" in str(error_msg)
-
-
-def test_main_with_list_command() -> None:
-    """Test the main function with list command."""
-    test_args = ["cmakepresets", "--directory", "/some/dir", "list"]
-
-    with patch("sys.argv", test_args):
-        with patch("cmakepresets.cli.CMakePresets") as mock_preset_class:
-            mock_instance = MagicMock()
-            mock_preset_class.return_value = mock_instance
-
-            with patch("cmakepresets.cli.handle_list_command") as mock_handler:
-                mock_handler.return_value = 0
-
+            # Test with JSON output
+            args.json = True
+            with patch("argparse.ArgumentParser.parse_args", return_value=args):
                 result = cli.main()
 
                 assert result == 0
-                mock_handler.assert_called_once()
-                mock_preset_class.assert_called_once_with("/some/dir")
+                call_arg = mock_console_print.call_args[0][0]
+                parsed = json.loads(call_arg)
+                assert parsed["name"] == "default"
+                assert parsed["generator"] == "Ninja"
+                assert parsed["cacheVariables"]["CMAKE_BUILD_TYPE"] == "Debug"
 
 
-def test_main_error_handling() -> None:
-    """Test main function error handling."""
-    test_args = ["cmakepresets", "--directory", "/some/dir", "list"]
+@CMakePresets_json("""
+{
+    "version": 4,
+    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+    "configurePresets": [
+        {"name": "default", "generator": "Ninja"}
+    ]
+}
+""")
+def test_handle_show_command_not_found(mock_console_print: MagicMock) -> None:
+    """Test the show command with non-existent preset."""
+    args = argparse.Namespace(
+        file="CMakePresets.json", directory=None, command="show", preset_name="nonexistent", type=None, json=False, flatten=False, verbose=0
+    )
 
-    with patch("sys.argv", test_args):
-        with patch("cmakepresets.cli.CMakePresets", side_effect=Exception("Test error")):
-            with patch("cmakepresets.cli.console.print") as mock_print:
+    with patch("sys.argv", ["cmakepresets", "show", "nonexistent"]):
+        with patch("argparse.ArgumentParser.parse_args", return_value=args):
+            result = cli.main()
+
+            assert result == 1
+            mock_console_print.assert_called_once()
+            # Check error message contains preset name
+            error_msg = mock_console_print.call_args[0][0]
+            assert "nonexistent" in str(error_msg)
+            assert "Error" in str(error_msg)
+
+
+@CMakePresets_json("""
+{
+    "version": 4,
+    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+    "configurePresets": [
+        {"name": "default", "generator": "Ninja"}
+    ],
+    "buildPresets": [
+        {"name": "default-build", "configurePreset": "default"}
+    ],
+    "testPresets": [
+        {"name": "default-test", "configurePreset": "default"}
+    ]
+}
+""")
+def test_handle_related_command(mock_console_print: MagicMock) -> None:
+    """Test the related command."""
+    args = argparse.Namespace(
+        file="CMakePresets.json", directory=None, command="related", configure_preset="default", type="all", show_hidden=False, plain=False, verbose=0
+    )
+
+    with patch("sys.argv", ["cmakepresets", "related", "default", "--type", "all"]):
+        with patch("argparse.ArgumentParser.parse_args", return_value=args):
+            result = cli.main()
+
+            assert result == 0
+            mock_console_print.assert_called()
+
+            # Check output contains related presets
+            output_text = " ".join(str(call) for call in mock_console_print.call_args_list)
+            assert "default-build" in output_text
+            assert "default-test" in output_text
+
+            # Reset for specific type test
+            mock_console_print.reset_mock()
+
+            # Test with specific type
+            args.type = "build"
+            with patch("sys.argv", ["cmakepresets", "related", "default", "--type", "build"]):
+                with patch("argparse.ArgumentParser.parse_args", return_value=args):
+                    result = cli.main()
+
+                    assert result == 0
+                    mock_console_print.assert_called()
+                    output_text = " ".join(str(call) for call in mock_console_print.call_args_list)
+                    assert "default-build" in output_text
+
+
+@CMakePresets_json("""
+{
+    "version": 4,
+    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+    "configurePresets": [
+        {"name": "default", "generator": "Ninja"}
+    ],
+    "buildPresets": [
+        {"name": "default-build", "configurePreset": "default"}
+    ],
+    "testPresets": [
+        {"name": "default-test", "configurePreset": "default"}
+    ]
+}
+""")
+def test_handle_related_command_plain_output(mock_console_print: MagicMock) -> None:
+    """Test the related command with plain output for scripts."""
+    args = argparse.Namespace(
+        file="CMakePresets.json", directory=None, command="related", configure_preset="default", type="all", show_hidden=False, plain=True, verbose=0
+    )
+
+    with patch("sys.argv", ["cmakepresets", "related", "default", "--plain"]):
+        with patch("argparse.ArgumentParser.parse_args", return_value=args):
+            with patch("builtins.print") as mock_print:
                 result = cli.main()
 
-                assert result == 1
+                assert result == 0
                 mock_print.assert_called_once()
-                # Check error message
-                error_msg = mock_print.call_args[0][0]
-                assert "Error" in str(error_msg)
-                assert "Test error" in str(error_msg)
+                # Should print available types
+                output = mock_print.call_args[0][0]
+                assert "build" in output
+                assert "test" in output
 
 
-# Integration tests with fake filesystem
+@CMakePresets_json("""
+{
+    "version": 4,
+    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+    "configurePresets": [
+        {"name": "default", "generator": "Ninja"}
+    ]
+}
+""")
+def test_handle_related_command_not_found(mock_console_print: MagicMock) -> None:
+    """Test the related command with non-existent configure preset."""
+    args = argparse.Namespace(
+        file="CMakePresets.json", directory=None, command="related", configure_preset="nonexistent", type="all", show_hidden=False, plain=False, verbose=0
+    )
+
+    with patch("sys.argv", ["cmakepresets", "related", "nonexistent"]):
+        with patch("argparse.ArgumentParser.parse_args", return_value=args):
+            result = cli.main()
+
+            assert result == 1
+            mock_console_print.assert_called_once()
+            # Check error message contains preset name
+            error_msg = mock_console_print.call_args[0][0]
+            assert "nonexistent" in str(error_msg)
+
+
+@CMakePresets_json("""
+{
+    "version": 4,
+    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+    "configurePresets": [
+        {"name": "default", "generator": "Ninja"}
+    ]
+}
+""")
+def test_main_with_list_command(mock_console_print: MagicMock) -> None:
+    """Test the main function with list command."""
+    args = argparse.Namespace(file="CMakePresets.json", directory=None, command="list", type="configure", show_hidden=False, flat=False, verbose=0)
+
+    with patch("sys.argv", ["cmakepresets", "list"]):
+        with patch("argparse.ArgumentParser.parse_args", return_value=args):
+            result = cli.main()
+
+            assert result == 0
+            mock_console_print.assert_called()
+            # Check output contains preset
+            output_text = " ".join(str(call) for call in mock_console_print.call_args_list)
+            assert "default" in output_text
+
+
+@CMakePresets_json("""
+{
+    "version": 4,
+    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+    "configurePresets": [
+        {"name": "default", "generator": "Ninja"}
+    ]
+}
+""")
+def test_main_error_handling(mock_console_print: MagicMock) -> None:
+    """Test main function error handling."""
+    # Create a situation that would cause an exception
+    args = argparse.Namespace(file="NonExistentFile.json", directory=None, command="list", type="configure", show_hidden=False, flat=False, verbose=0)
+
+    with patch("sys.argv", ["cmakepresets", "--file", "NonExistentFile.json", "list"]):
+        with patch("argparse.ArgumentParser.parse_args", return_value=args):
+            result = cli.main()
+
+            assert result == 1
+
+            mock_console_print.assert_called()
+            # Check error message
+            error_msg = mock_console_print.call_args[0][0]
+            assert "Error" in str(error_msg)
+
+
 @CMakePresets_json("""
 {
     "version": 4,
