@@ -49,9 +49,12 @@ check_untyped_defs = true
 disallow_incomplete_defs = true
 ignore_missing_imports = true
 
-[tool.tomlscript]
+[tool.aliases]
 check = "uv run pre-commit run --all-files"
 test = "uv run pytest"
+
+[tool.uv.sources]
+pyproject-aliases = { git = "https://github.com/tkk2112/pyproject_aliases.git" }
 
 [dependency-groups]
 dev = [
@@ -63,5 +66,5 @@ dev = [
     "mypy>=1.15.0",
     "types-jsonschema>=4.23.0.20241208",
     "types-requests>=2.32.0.20250306",
-    "tomlscript>=0.2.1",
+    "pyproject-aliases",
 ]
