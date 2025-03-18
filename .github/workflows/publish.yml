@@ -8,7 +8,7 @@ on:
       target:
         description: "Deployment target environment"
         required: true
-        default: "pypi"
+        default: "testpypi"
 
 concurrency:
   group: "publish-${{ github.ref }}"
@@ -30,7 +30,7 @@ jobs:
     needs: [verify-tests]
     runs-on: ubuntu-latest
     environment:
-      name: ${{ github.event.inputs.target }}
+      name: ${{ github.event.inputs.target || 'pypi' }}
     permissions:
       id-token: write
     steps:
@@ -49,7 +49,7 @@ jobs:
         run: |
           uv build
 
-      - name: "publish module (index: ${{ github.event.inputs.target }})"
+      - name: "publish module (index: ${{ github.event.inputs.target || 'pypi' }})"
         env:
           UV_PUBLISH_URL: ${{ vars.UV_PUBLISH_URL }}
           UV_PUBLISH_CHECK_URL: ${{ vars.UV_PUBLISH_CHECK_URL }}
