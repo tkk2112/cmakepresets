@@ -19,7 +19,7 @@ CMakePresets is a utility that helps you inspect and work with CMake preset conf
 
 [//]: # (x-release-please-start-version)
 ```bash
-pip install git+https://github.com/tkk2112/cmakepresets.git@v0.2.1
+pip install git+https://github.com/tkk2112/cmakepresets.git@v0.2.5
 ```
 [//]: # (x-release-please-end)
 
