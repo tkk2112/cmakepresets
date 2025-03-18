@@ -1,0 +1,58 @@
+name: Publish Python Package
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Deployment target environment'
+        required: true
+        default: 'testpypi'
+
+concurrency:
+  group: "publish-${{ github.ref }}"
+  cancel-in-progress: false
+
+jobs:
+  run-tests:
+    uses: ./.github/workflows/reusable-test.yml
+
+  verify-tests:
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs: run-tests
+    steps:
+      - shell: python
+        run: |
+          import sys
+          if all(result == "success" for result in ${{ toJSON(needs.*.result) }}):
+            sys.exit(0)
+          else:
+            sys.exit(1)
+
+  deploy:
+    needs: [verify-tests]
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event.inputs.target }}
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+          enable-cache: false
+
+      - name: Install dependencies
+        run: |
+          uv sync --locked
+
+      - name: Build
+        run: |
+          uv build -v
+
+      - name: Publish
+        run: |
+          uv publish -v --trusted-publishing always
