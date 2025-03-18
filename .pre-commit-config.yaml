@@ -1,39 +1,64 @@
+default_install_hook_types:
+  - pre-commit
+  - commit-msg
+  - post-checkout
+  - post-merge
+  - post-rewrite
+
 repos:
-- repo: https://github.com/astral-sh/uv-pre-commit
-  rev: 0.6.6
-  hooks:
-    # Sync all dependencies
-    - id: uv-sync
-      args: ["--locked", "--all-packages"]
-      stages: [post-checkout, post-merge, post-rewrite]
-    # Update the uv lockfile
-    - id: uv-lock
-- repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.11.0
-  hooks:
-    # Run the linter.
-    - id: ruff
-      args: [ --fix ]
-    # Run the formatter.
-    - id: ruff-format
-- repo: https://github.com/PyCQA/isort
-  rev: 6.0.1
-  hooks:
-    - id: isort
-- repo: https://github.com/pre-commit/mirrors-mypy
-  rev: v1.15.0
-  hooks:
-    -   id: mypy
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.6.6
+    hooks:
+      - id: uv-sync
+        args: ["--locked", "--all-packages"]
+        stages: [post-checkout, post-merge, post-rewrite]
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.0.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args:
+          - --strict
+          - feat
+          - fix
+          - chore
+          - refactor
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.31.3
+    hooks:
+      - name: check-github-workflows
+        id: check-github-workflows
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.15.0
+    hooks:
+      - id: mypy
         args: [--strict]
         additional_dependencies:
           - types-requests
           - types-jsonschema
-- repo: https://github.com/python-jsonschema/check-jsonschema
-  rev: 0.31.3
-  hooks:
-    - id: check-github-workflows
-    - id: check-renovate
-- repo: https://github.com/renovatebot/pre-commit-hooks
-  rev: 39.205.1
-  hooks:
-    - id: renovate-config-validator
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: debug-statements
+  - repo: https://github.com/asottile/add-trailing-comma
+    rev: v3.1.0
+    hooks:
+    - id: add-trailing-comma
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.19.1
+    hooks:
+    - id: pyupgrade
+      args: [--py313-plus]
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+  - repo: https://github.com/PyCQA/isort
+    rev: 6.0.1
+    hooks:
+      - id: isort
