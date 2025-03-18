@@ -1,4 +1,4 @@
-name: Publish Python Package
+name: Publish module
 
 on:
   release:
@@ -8,7 +8,7 @@ on:
       target:
         description: 'Deployment target environment'
         required: true
-        default: 'testpypi'
+        default: 'pypi'
 
 concurrency:
   group: "publish-${{ github.ref }}"
@@ -54,5 +54,8 @@ jobs:
           uv build -v
 
       - name: Publish
+        env:
+          UV_PUBLISH_URL: ${{ vars.UV_PUBLISH_URL }}
+          UV_PUBLISH_CHECK_URL: ${{ vars.UV_PUBLISH_CHECK_URL }}
         run: |
           uv publish -v --trusted-publishing always
