@@ -1,4 +1,4 @@
-name: Test module
+name: test cmakepresets
 
 on:
   push:
@@ -15,10 +15,5 @@ jobs:
     runs-on: ubuntu-latest
     needs: run-tests
     steps:
-      - shell: python
-        run: |
-          import sys
-          if all(result == "success" for result in ${{ toJSON(needs.*.result) }}):
-            sys.exit(0)
-          else:
-            sys.exit(1)
+      - run: exit 1
+        if: ${{ contains(toJSON(needs.*.result), 'failure') || contains(toJSON(needs.*.result), 'cancelled') }}
