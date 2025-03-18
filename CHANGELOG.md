@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.6](https://github.com/tkk2112/cmakepresets/compare/v0.2.5...v0.2.6) (2025-03-18)
+
+
+### Bug Fixes
+
+* project version file was wrongly registered in config ([491c2c9](https://github.com/tkk2112/cmakepresets/commit/491c2c92df80996b0210ca7824dad60582f87e14))
+
 ## [0.2.5](https://github.com/tkk2112/cmakepresets/compare/v0.2.1...v0.2.5) (2025-03-18)
 
 
