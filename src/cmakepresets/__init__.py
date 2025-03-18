@@ -21,4 +21,4 @@ __all__: Final = [
     "FileParseError",
     "VersionError",
 ]
-__version__ = "0.2.1"
+__version__ = "v0.2.1"  # {x-release-please-version}
