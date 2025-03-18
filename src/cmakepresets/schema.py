@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Any, Dict, Final, Optional, cast
+from typing import Any, Final, cast
 
 import jsonschema
 import requests
@@ -29,7 +29,7 @@ MASTER_URL = "https://raw.githubusercontent.com/Kitware/CMake/refs/heads/master/
 VERSIONED_URL = "https://raw.githubusercontent.com/Kitware/CMake/refs/tags/v{}.{}.{}/Help/manual/presets/schema.json"
 
 
-def get_schema(version: int) -> Dict[str, Any]:
+def get_schema(version: int) -> dict[str, Any]:
     """
     Get the CMake presets schema that supports the specified version.
 
@@ -56,8 +56,8 @@ def get_schema(version: int) -> Dict[str, Any]:
     if cache_file.exists():
         try:
             logger.debug(f"Found cached schema at {cache_file}")
-            with open(cache_file, "r", encoding="utf-8") as f:
-                schema: Dict[str, Any] = json.load(f)
+            with open(cache_file, encoding="utf-8") as f:
+                schema: dict[str, Any] = json.load(f)
 
             # Check if the cached schema supports the requested version
             if schema_has_version(schema, version):
@@ -65,7 +65,7 @@ def get_schema(version: int) -> Dict[str, Any]:
                 return schema
             else:
                 logger.debug(f"Cached schema does not support version {version}, will download")
-        except (IOError, json.JSONDecodeError) as e:
+        except (OSError, json.JSONDecodeError) as e:
             logger.debug(f"Error reading cached schema: {e}")
             # If there's an error reading the cache, we'll just download a new schema
             pass
@@ -127,7 +127,7 @@ def get_schema_url_for_version(version: int) -> str:
         return MASTER_URL
 
 
-def get_latest_master_schema(force_download: bool = False) -> Dict[str, Any]:
+def get_latest_master_schema(force_download: bool = False) -> dict[str, Any]:
     """
     Get the latest schema from the master branch.
 
@@ -150,9 +150,9 @@ def get_latest_master_schema(force_download: bool = False) -> Dict[str, Any]:
     if not force_download and cache_file.exists():
         try:
             logger.debug(f"Using cached master schema from {cache_file}")
-            with open(cache_file, "r", encoding="utf-8") as f:
-                return cast(Dict[str, Any], json.load(f))
-        except (IOError, json.JSONDecodeError) as e:
+            with open(cache_file, encoding="utf-8") as f:
+                return cast(dict[str, Any], json.load(f))
+        except (OSError, json.JSONDecodeError) as e:
             logger.debug(f"Error reading cached master schema: {e}")
             # If there's an error reading the cache, we'll download a new one
             pass
@@ -164,7 +164,7 @@ def get_latest_master_schema(force_download: bool = False) -> Dict[str, Any]:
     try:
         response = requests.get(MASTER_URL, timeout=10)
         response.raise_for_status()
-        schema: Dict[str, Any] = response.json()
+        schema: dict[str, Any] = response.json()
         logger.debug("Successfully downloaded master schema")
 
         # Save the downloaded schema to the cache
@@ -179,7 +179,7 @@ def get_latest_master_schema(force_download: bool = False) -> Dict[str, Any]:
         raise SchemaDownloadError(f"Failed to download latest schema: {e}")
 
 
-def schema_has_version(schema: Dict[str, Any], version: int) -> bool:
+def schema_has_version(schema: dict[str, Any], version: int) -> bool:
     """
     Check if a schema supports the specified version.
 
@@ -199,7 +199,7 @@ def schema_has_version(schema: Dict[str, Any], version: int) -> bool:
     return False
 
 
-def validate_json_against_schema(data: Dict[str, Any], schema: Dict[str, Any]) -> None:
+def validate_json_against_schema(data: dict[str, Any], schema: dict[str, Any]) -> None:
     """
     Validate JSON data against a schema.
 
@@ -245,13 +245,13 @@ def validate_json_against_schema(data: Dict[str, Any], schema: Dict[str, Any]) -
         raise
 
 
-def _is_version_1(data: Dict[str, Any]) -> bool:
+def _is_version_1(data: dict[str, Any]) -> bool:
     if "version" in data and data["version"] == 1:
         return True
     return False
 
 
-def _is_future_version(data: Dict[str, Any], schema: Dict[str, Any]) -> bool:
+def _is_future_version(data: dict[str, Any], schema: dict[str, Any]) -> bool:
     """Check if data has a version newer than what's defined in schema."""
     if "oneOf" not in schema or "version" not in data:
         return False
@@ -260,7 +260,7 @@ def _is_future_version(data: Dict[str, Any], schema: Dict[str, Any]) -> bool:
     return data["version"] not in schema_versions and data["version"] > max(schema_versions, default=0)
 
 
-def _get_schema_versions(schema: Dict[str, Any]) -> set[int]:
+def _get_schema_versions(schema: dict[str, Any]) -> set[int]:
     """Extract all version numbers defined in the schema."""
     schema_versions: set[int] = set()
     for variant in schema.get("oneOf", []):
@@ -271,10 +271,10 @@ def _get_schema_versions(schema: Dict[str, Any]) -> set[int]:
     return schema_versions
 
 
-def _try_validate_future_version(data: Dict[str, Any], schema: Dict[str, Any]) -> bool:
+def _try_validate_future_version(data: dict[str, Any], schema: dict[str, Any]) -> bool:
     """Try to validate a future version against the highest known version in schema."""
 
-    def try_validation_with_schema(schema_to_use: Dict[str, Any], description: str) -> bool:
+    def try_validation_with_schema(schema_to_use: dict[str, Any], description: str) -> bool:
         """Helper to attempt validation with a given schema."""
         schema_versions = _get_schema_versions(schema_to_use)
         if not schema_versions:
@@ -313,7 +313,7 @@ def _try_validate_future_version(data: Dict[str, Any], schema: Dict[str, Any]) -
     return False
 
 
-def _get_feature_min_versions(schema: Dict[str, Any]) -> Dict[str, int]:
+def _get_feature_min_versions(schema: dict[str, Any]) -> dict[str, int]:
     """Extract the minimum version required for each field in the schema."""
     feature_min_versions = {}
 
@@ -331,7 +331,7 @@ def _get_feature_min_versions(schema: Dict[str, Any]) -> Dict[str, int]:
     return feature_min_versions
 
 
-def _get_improved_error_message(data: Dict[str, Any], original_error: jsonschema.exceptions.ValidationError) -> Optional[str]:
+def _get_improved_error_message(data: dict[str, Any], original_error: jsonschema.exceptions.ValidationError) -> str | None:
     """Generate a more helpful error message for schema validation failures."""
     # Check for version compatibility with specific fields
     if "version" in data:
@@ -361,7 +361,7 @@ def _get_improved_error_message(data: Dict[str, Any], original_error: jsonschema
     return None  # Keep original error message if no improvements made
 
 
-def check_cmake_version_for_schema(schema_version: int, cmake_min_required: Dict[str, int]) -> None:
+def check_cmake_version_for_schema(schema_version: int, cmake_min_required: dict[str, int]) -> None:
     """
     Check if the CMake minimum required version is sufficient for the schema version.
     Logs warnings if the CMake version is too low or if the schema version is unknown.
@@ -384,5 +384,5 @@ def check_cmake_version_for_schema(schema_version: int, cmake_min_required: Dict
     else:
         logger.debug(
             f"CMake minimum required version {provided_version[0]}.{provided_version[1]}.{provided_version[2]} "
-            f"is sufficient for schema version {schema_version}"
+            f"is sufficient for schema version {schema_version}",
         )

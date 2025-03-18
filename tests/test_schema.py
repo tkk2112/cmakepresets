@@ -1,4 +1,4 @@
-from typing import Any, Dict, cast
+from typing import Any, cast
 
 import jsonschema
 import jsonschema.exceptions
@@ -10,7 +10,7 @@ from cmakepresets.schema import check_cmake_version_for_schema, get_schema, vali
 
 
 def test_get_schema() -> None:
-    def in_schema(version: int, key: str, schema: Dict[str, Any]) -> bool:
+    def in_schema(version: int, key: str, schema: dict[str, Any]) -> bool:
         if "oneOf" in schema:
             for variant in schema.get("oneOf", []):
                 if "properties" in variant and variant["properties"].get("version", {}).get("const") == version and key in variant["properties"]:

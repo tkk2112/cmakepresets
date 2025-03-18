@@ -1,6 +1,6 @@
 import argparse
 import json
-from typing import Generator
+from collections.abc import Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -13,7 +13,7 @@ from .decorators import CMakePresets_json
 
 
 @pytest.fixture(scope="function")  # type: ignore[misc]
-def mock_console_print() -> Generator[MagicMock, None, None]:
+def mock_console_print() -> Generator[MagicMock]:
     """Fixture to mock console.print to capture output."""
     with patch("cmakepresets.cli.console.print") as mock_print:
         yield mock_print
@@ -42,7 +42,8 @@ def mock_presets() -> MagicMock:
 
     # Setup mock methods
     presets.get_preset_by_name.side_effect = lambda preset_type, name: next(
-        (p for p in getattr(presets, f"{preset_type}_presets") if p.get("name") == name), None
+        (p for p in getattr(presets, f"{preset_type}_presets") if p.get("name") == name),
+        None,
     )
 
     # Setup preset tree for related commands
@@ -201,7 +202,14 @@ def test_handle_show_command(mock_console_print: MagicMock) -> None:
     """Test the show command."""
     # Test with standard output
     args = argparse.Namespace(
-        file="CMakePresets.json", directory=None, command="show", preset_name="default", type="configure", json=False, flatten=False, verbose=0
+        file="CMakePresets.json",
+        directory=None,
+        command="show",
+        preset_name="default",
+        type="configure",
+        json=False,
+        flatten=False,
+        verbose=0,
     )
 
     with patch("sys.argv", ["cmakepresets", "show", "default", "--type", "configure"]):
@@ -239,7 +247,14 @@ def test_handle_show_command(mock_console_print: MagicMock) -> None:
 def test_handle_show_command_not_found(mock_console_print: MagicMock) -> None:
     """Test the show command with non-existent preset."""
     args = argparse.Namespace(
-        file="CMakePresets.json", directory=None, command="show", preset_name="nonexistent", type=None, json=False, flatten=False, verbose=0
+        file="CMakePresets.json",
+        directory=None,
+        command="show",
+        preset_name="nonexistent",
+        type=None,
+        json=False,
+        flatten=False,
+        verbose=0,
     )
 
     with patch("sys.argv", ["cmakepresets", "show", "nonexistent"]):
@@ -272,7 +287,14 @@ def test_handle_show_command_not_found(mock_console_print: MagicMock) -> None:
 def test_handle_related_command(mock_console_print: MagicMock) -> None:
     """Test the related command."""
     args = argparse.Namespace(
-        file="CMakePresets.json", directory=None, command="related", configure_preset="default", type="all", show_hidden=False, plain=False, verbose=0
+        file="CMakePresets.json",
+        directory=None,
+        command="related",
+        configure_preset="default",
+        type="all",
+        show_hidden=False,
+        plain=False,
+        verbose=0,
     )
 
     with patch("sys.argv", ["cmakepresets", "related", "default", "--type", "all"]):
@@ -320,7 +342,14 @@ def test_handle_related_command(mock_console_print: MagicMock) -> None:
 def test_handle_related_command_plain_output(mock_console_print: MagicMock) -> None:
     """Test the related command with plain output for scripts."""
     args = argparse.Namespace(
-        file="CMakePresets.json", directory=None, command="related", configure_preset="default", type="all", show_hidden=False, plain=True, verbose=0
+        file="CMakePresets.json",
+        directory=None,
+        command="related",
+        configure_preset="default",
+        type="all",
+        show_hidden=False,
+        plain=True,
+        verbose=0,
     )
 
     with patch("sys.argv", ["cmakepresets", "related", "default", "--plain"]):
@@ -348,7 +377,14 @@ def test_handle_related_command_plain_output(mock_console_print: MagicMock) -> N
 def test_handle_related_command_not_found(mock_console_print: MagicMock) -> None:
     """Test the related command with non-existent configure preset."""
     args = argparse.Namespace(
-        file="CMakePresets.json", directory=None, command="related", configure_preset="nonexistent", type="all", show_hidden=False, plain=False, verbose=0
+        file="CMakePresets.json",
+        directory=None,
+        command="related",
+        configure_preset="nonexistent",
+        type="all",
+        show_hidden=False,
+        plain=False,
+        verbose=0,
     )
 
     with patch("sys.argv", ["cmakepresets", "related", "nonexistent"]):
@@ -461,7 +497,14 @@ def test_integration_show_command(mock_console_print: MagicMock) -> None:
     """Integration test for show command using real file system."""
     # Create CLI arguments
     args = argparse.Namespace(
-        file="CMakePresets.json", directory=None, command="show", preset_name="derived", type="configure", json=False, flatten=True, verbose=0
+        file="CMakePresets.json",
+        directory=None,
+        command="show",
+        preset_name="derived",
+        type="configure",
+        json=False,
+        flatten=True,
+        verbose=0,
     )
 
     with patch("sys.argv", ["cmakepresets", "--file", "CMakePresets.json", "show", "derived"]):
@@ -503,7 +546,14 @@ def test_integration_related_command(mock_console_print: MagicMock) -> None:
     """Integration test for related command using real file system."""
     # Create CLI arguments
     args = argparse.Namespace(
-        file="CMakePresets.json", directory=None, command="related", configure_preset="default", type="all", show_hidden=False, plain=False, verbose=0
+        file="CMakePresets.json",
+        directory=None,
+        command="related",
+        configure_preset="default",
+        type="all",
+        show_hidden=False,
+        plain=False,
+        verbose=0,
     )
 
     with patch("sys.argv", ["cmakepresets", "--file", "CMakePresets.json", "related", "default"]):

@@ -1,5 +1,6 @@
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Dict, Final, Iterator, List, Optional, Union, cast
+from typing import Any, Final, cast
 
 from . import logger as mainLogger
 from .parser import Parser
@@ -18,7 +19,7 @@ PRESET_TYPES: Final = {
 class CMakePresets:
     """Class for working with CMake presets data."""
 
-    def __init__(self, path: Union[str, Path]) -> None:
+    def __init__(self, path: str | Path) -> None:
         """
         Initialize with path to CMakePresets.json file/directory.
 
@@ -47,31 +48,31 @@ class CMakePresets:
             logger.debug(f"Found {count} {preset_type} presets")
 
     @property
-    def configure_presets(self) -> List[Dict[str, Any]]:
+    def configure_presets(self) -> list[dict[str, Any]]:
         """Get all configure presets across all loaded files."""
         return list(self._iter_presets_of_type(PRESET_TYPES["configure"]))
 
     @property
-    def build_presets(self) -> List[Dict[str, Any]]:
+    def build_presets(self) -> list[dict[str, Any]]:
         """Get all build presets across all loaded files."""
         return list(self._iter_presets_of_type(PRESET_TYPES["build"]))
 
     @property
-    def test_presets(self) -> List[Dict[str, Any]]:
+    def test_presets(self) -> list[dict[str, Any]]:
         """Get all test presets across all loaded files."""
         return list(self._iter_presets_of_type(PRESET_TYPES["test"]))
 
     @property
-    def package_presets(self) -> List[Dict[str, Any]]:
+    def package_presets(self) -> list[dict[str, Any]]:
         """Get all package presets across all loaded files."""
         return list(self._iter_presets_of_type(PRESET_TYPES["package"]))
 
     @property
-    def workflow_presets(self) -> List[Dict[str, Any]]:
+    def workflow_presets(self) -> list[dict[str, Any]]:
         """Get all workflow presets across all loaded files."""
         return list(self._iter_presets_of_type(PRESET_TYPES["workflow"]))
 
-    def _iter_presets_of_type(self, preset_type: str) -> Iterator[Dict[str, Any]]:
+    def _iter_presets_of_type(self, preset_type: str) -> Iterator[dict[str, Any]]:
         """
         Iterate through all presets of a specific type across all loaded files.
 
@@ -83,30 +84,29 @@ class CMakePresets:
         """
         for filepath, file_data in self.parser.loaded_files.items():
             if preset_type in file_data:
-                for preset in file_data[preset_type]:
-                    yield preset
+                yield from file_data[preset_type]
 
-    def get_configure_presets(self) -> List[Dict[str, Any]]:
+    def get_configure_presets(self) -> list[dict[str, Any]]:
         """Get all configure presets."""
         return self.configure_presets
 
-    def get_build_presets(self) -> List[Dict[str, Any]]:
+    def get_build_presets(self) -> list[dict[str, Any]]:
         """Get all build presets."""
         return self.build_presets
 
-    def get_test_presets(self) -> List[Dict[str, Any]]:
+    def get_test_presets(self) -> list[dict[str, Any]]:
         """Get all test presets."""
         return self.test_presets
 
-    def get_package_presets(self) -> List[Dict[str, Any]]:
+    def get_package_presets(self) -> list[dict[str, Any]]:
         """Get all package presets."""
         return self.package_presets
 
-    def get_workflow_presets(self) -> List[Dict[str, Any]]:
+    def get_workflow_presets(self) -> list[dict[str, Any]]:
         """Get all workflow presets."""
         return self.workflow_presets
 
-    def get_preset_by_name(self, preset_type: str, name: str) -> Optional[Dict[str, Any]]:
+    def get_preset_by_name(self, preset_type: str, name: str) -> dict[str, Any] | None:
         """
         Get a specific preset by type and name.
 
@@ -127,12 +127,12 @@ class CMakePresets:
             for preset in file_data[preset_key]:
                 if preset.get("name") == name:
                     logger.debug(f"Found preset '{name}' in file {filepath}")
-                    return cast(Dict[str, Any], preset)
+                    return cast(dict[str, Any], preset)
 
         logger.debug(f"Preset '{name}' not found")
         return None
 
-    def find_preset(self, name: str) -> Optional[Dict[str, Any]]:
+    def find_preset(self, name: str) -> dict[str, Any] | None:
         """
         Find a preset by name across all preset types.
 
@@ -149,7 +149,7 @@ class CMakePresets:
 
         return None
 
-    def get_preset_inheritance_chain(self, preset_type: str, preset_name: str) -> List[Dict[str, Any]]:
+    def get_preset_inheritance_chain(self, preset_type: str, preset_name: str) -> list[dict[str, Any]]:
         """
         Get the inheritance chain for a preset.
 
@@ -160,7 +160,7 @@ class CMakePresets:
         Returns:
             List of preset dicts in inheritance order (base first, immediate parent last)
         """
-        chain: List[Dict[str, Any]] = []
+        chain: list[dict[str, Any]] = []
         current = self.get_preset_by_name(preset_type, preset_name)
 
         if not current or "inherits" not in current:
@@ -195,7 +195,7 @@ class CMakePresets:
 
         return chain
 
-    def flatten_preset(self, preset_type: str, preset_name: str) -> Dict[str, Any]:
+    def flatten_preset(self, preset_type: str, preset_name: str) -> dict[str, Any]:
         """
         Get a preset with all inherited values resolved.
 
@@ -216,7 +216,7 @@ class CMakePresets:
         chain.append(preset)  # Add the preset itself
 
         # Merge all presets in the chain
-        flattened: Dict[str, Any] = {}
+        flattened: dict[str, Any] = {}
 
         # Properties that should never be inherited from parent presets
         non_inheritable_properties = ["inherits", "hidden"]
@@ -246,7 +246,7 @@ class CMakePresets:
 
         return flattened
 
-    def get_dependent_presets(self, preset_type: str, preset_name: str) -> Dict[str, List[Dict[str, Any]]]:
+    def get_dependent_presets(self, preset_type: str, preset_name: str) -> dict[str, list[dict[str, Any]]]:
         """
         Get presets that depend on a specific preset.
 
@@ -257,7 +257,7 @@ class CMakePresets:
         Returns:
             Dict mapping preset types to lists of dependent presets
         """
-        dependent_presets: Dict[str, List[Dict[str, Any]]] = {pt: [] for pt in PRESET_TYPES.values()}
+        dependent_presets: dict[str, list[dict[str, Any]]] = {pt: [] for pt in PRESET_TYPES.values()}
 
         # Only configure presets can be referenced by other preset types
         if preset_type != "configure":
@@ -280,7 +280,7 @@ class CMakePresets:
 
         return dependent_presets
 
-    def get_preset_tree(self) -> Dict[str, Any]:
+    def get_preset_tree(self) -> dict[str, Any]:
         """
         Get a tree structure of presets, where configure presets are the roots,
         and build/test/package presets that depend on them are children.
@@ -294,12 +294,12 @@ class CMakePresets:
         for configure_preset in self.configure_presets:
             name = configure_preset.get("name")
             if name:
-                dependent_presets: Dict[str, List[Dict[str, Any]]] = self.get_dependent_presets("configure", name)
+                dependent_presets: dict[str, list[dict[str, Any]]] = self.get_dependent_presets("configure", name)
                 tree[name] = {"preset": configure_preset, "dependents": dependent_presets}
 
         return tree
 
-    def find_related_presets(self, configure_preset_name: str, preset_type: Optional[str] = None) -> Optional[Dict[str, List[Dict[str, Any]]]]:
+    def find_related_presets(self, configure_preset_name: str, preset_type: str | None = None) -> dict[str, list[dict[str, Any]]] | None:
         """
         Find presets related to a specific configure preset.
 

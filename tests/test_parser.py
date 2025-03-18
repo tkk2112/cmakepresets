@@ -56,7 +56,7 @@ def test_parse_file_valid() -> None:
     {
         "CMakePresets.json": '{"version": 4, "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0}, "include": ["included.json"]}',
         "included.json": '{"version": 4, "configurePresets": [{"name": "included-preset"}]}',
-    }
+    },
 )
 def test_parse_file_with_include() -> None:
     """Test parsing a file with includes loads and processes both files."""
@@ -83,7 +83,7 @@ def test_parse_file_with_include() -> None:
         "CMakePresets.json": '{"version": 4, "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0}, "include": ["level1/second.json"]}',
         "level1/second.json": '{"version": 4, "include": ["../level2/third.json"]}',
         "level2/third.json": '{"version": 4, "configurePresets": [{"name": "deep-preset"}]}',
-    }
+    },
 )
 def test_parse_file_with_multi_level_includes() -> None:
     """Test parsing with multi-level includes resolves paths correctly."""
@@ -105,7 +105,7 @@ def test_parse_file_with_multi_level_includes() -> None:
     {
         "project/CMakePresets.json": '{"version": 4, "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0}, "include": ["configs/dev.json"]}',
         "project/configs/dev.json": '{"version": 4, "configurePresets": [{"name": "dev-preset"}]}',
-    }
+    },
 )
 def test_parse_file_with_relative_include_paths() -> None:
     """Test that includes are resolved relative to the file that includes them."""
@@ -127,7 +127,7 @@ def test_parse_file_with_relative_include_paths() -> None:
     {
         "CMakePresets.json": '{"version": 3, "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0}, "configurePresets": [{"name": "base-preset"}]}',
         "CMakeUserPresets.json": '{"version": 3, "configurePresets": [{"name": "user-preset"}]}',
-    }
+    },
 )
 def test_parse_file_with_user_presets() -> None:
     """Test that CMakeUserPresets.json is automatically loaded when it exists."""
@@ -162,7 +162,7 @@ def test_parse_file_with_absolute_path() -> None:
     {
         "CMakePresets.json": '{"version": 4, "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0}, "include": ["/tmp/absolute_include.json"]}',
         "/tmp/absolute_include.json": '{"version": 4, "configurePresets": [{"name": "absolute-preset"}]}',
-    }
+    },
 )
 def test_parse_file_with_absolute_include_path() -> None:
     """Test parsing a file that includes another file using an absolute path."""
@@ -221,7 +221,7 @@ def test_parser_invalid_json() -> None:
         "CMakePresets.json": '{"version": 4,  "include": ["file1.json"]}',
         "file1.json": '{"version": 4, "include": ["file2.json"]}',
         "file2.json": '{"version": 4, "include": ["file1.json"]}',
-    }
+    },
 )
 def test_parser_deals_with_circular_include_detection() -> None:
     """Test detection of circular includes"""

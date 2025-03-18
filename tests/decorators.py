@@ -1,8 +1,9 @@
 import functools
 import json
 import os
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, TypeVar, Union, cast
+from typing import Any, TypeVar, cast
 
 from pyfakefs.fake_filesystem_unittest import Patcher
 
@@ -18,7 +19,7 @@ class CMakePresets_json:
                 or a dict mapping filenames to their JSON content strings.
     """
 
-    def __init__(self, content: Union[str, Dict[str, str]]) -> None:
+    def __init__(self, content: str | dict[str, str]) -> None:
         self.content = content
 
     def __call__(self, test_function: F) -> F:

@@ -1,7 +1,7 @@
 import argparse
 import json
 import sys
-from typing import Any, Dict, Final, List, Optional, Tuple
+from typing import Any, Final
 
 from rich.table import Table
 from rich.tree import Tree
@@ -34,7 +34,11 @@ def create_parser() -> argparse.ArgumentParser:
     # List command
     list_parser = subparsers.add_parser("list", help="List all presets with optional filtering")
     list_parser.add_argument(
-        "--type", "-t", choices=["configure", "build", "test", "package", "workflow"], default="all", help="Type of presets to list (default: all)"
+        "--type",
+        "-t",
+        choices=["configure", "build", "test", "package", "workflow"],
+        default="all",
+        help="Type of presets to list (default: all)",
     )
     list_parser.add_argument("--show-hidden", action="store_true", help="Show hidden presets")
     list_parser.add_argument("--flat", action="store_true", help="Show flat list without relationships")
@@ -56,7 +60,7 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def get_presets_by_type(presets: CMakePresets, preset_type: str) -> List[Dict[str, Any]]:
+def get_presets_by_type(presets: CMakePresets, preset_type: str) -> list[dict[str, Any]]:
     """Get presets of a specific type."""
     if preset_type == "configure":
         return presets.configure_presets
@@ -107,7 +111,7 @@ def _display_flat_preset_list(presets: CMakePresets, args: argparse.Namespace) -
     return 0
 
 
-def _filter_presets(preset_list: List[Dict[str, Any]], show_hidden: bool) -> List[Dict[str, Any]]:
+def _filter_presets(preset_list: list[dict[str, Any]], show_hidden: bool) -> list[dict[str, Any]]:
     """Filter presets based on visibility."""
     filtered = []
     for preset in preset_list:
@@ -118,7 +122,7 @@ def _filter_presets(preset_list: List[Dict[str, Any]], show_hidden: bool) -> Lis
     return filtered
 
 
-def _print_preset_item(preset: Dict[str, Any]) -> None:
+def _print_preset_item(preset: dict[str, Any]) -> None:
     """Print a single preset item in the flat list."""
     name = preset.get("name", "Unnamed")
     description = preset.get("description", "")
@@ -192,7 +196,7 @@ def _add_separator_row(table: Table) -> None:
     table.add_row(f"[dim]{separator}[/dim]", f"[dim]{separator}[/dim]", f"[dim]{separator}[/dim]")
 
 
-def _add_preset_group_to_table(table: Table, name: str, config_preset: Dict[str, Any], dependents: Dict[str, List[Dict[str, Any]]]) -> None:
+def _add_preset_group_to_table(table: Table, name: str, config_preset: dict[str, Any], dependents: dict[str, list[dict[str, Any]]]) -> None:
     """Add a preset group (configure preset and its dependents) to the table."""
     build_presets = dependents.get("buildPresets", [])
     test_presets = dependents.get("testPresets", [])
@@ -211,7 +215,10 @@ def _add_preset_group_to_table(table: Table, name: str, config_preset: Dict[str,
 
 
 def _format_configure_preset_display(
-    name: str, config_preset: Dict[str, Any], build_presets: List[Dict[str, Any]], test_presets: List[Dict[str, Any]]
+    name: str,
+    config_preset: dict[str, Any],
+    build_presets: list[dict[str, Any]],
+    test_presets: list[dict[str, Any]],
 ) -> str:
     """Format the display string for a configure preset."""
     # Style hidden presets differently rather than adding a marker
@@ -237,7 +244,7 @@ def _format_configure_preset_display(
     return config_display
 
 
-def _format_dependent_presets_display(presets: List[Dict[str, Any]]) -> str:
+def _format_dependent_presets_display(presets: list[dict[str, Any]]) -> str:
     """Format the display string for dependent presets (build or test)."""
     if not presets:
         return ""
@@ -281,7 +288,7 @@ def handle_show_command(presets: CMakePresets, args: argparse.Namespace) -> int:
     console.print(f"[bold]Preset: [bold cyan]{preset_name}[/bold cyan] ({found_type})[/bold]\n")
 
     # Display property sources and inheritance info
-    property_sources: Dict[str, str] = {}
+    property_sources: dict[str, str] = {}
     if not args.flatten:
         _show_inheritance_info(presets, found_preset, found_type, preset_name, property_sources)
 
@@ -291,10 +298,10 @@ def handle_show_command(presets: CMakePresets, args: argparse.Namespace) -> int:
     return 0
 
 
-def _find_preset(presets: CMakePresets, preset_name: str, preset_type: Optional[str]) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+def _find_preset(presets: CMakePresets, preset_name: str, preset_type: str | None) -> tuple[dict[str, Any] | None, str | None]:
     """Find a preset by name and type."""
     found_preset = None
-    found_type: Optional[str] = None
+    found_type: str | None = None
 
     # Fix for --type parameter
     if preset_type:
@@ -313,7 +320,7 @@ def _find_preset(presets: CMakePresets, preset_name: str, preset_type: Optional[
     return found_preset, found_type
 
 
-def _show_inheritance_info(presets: CMakePresets, found_preset: Dict[str, Any], found_type: str, preset_name: str, property_sources: Dict[str, str]) -> None:
+def _show_inheritance_info(presets: CMakePresets, found_preset: dict[str, Any], found_type: str, preset_name: str, property_sources: dict[str, str]) -> None:
     """Show inheritance information for a preset."""
     inheritance_chain = []
     if "inherits" in found_preset:
@@ -377,7 +384,12 @@ def _build_inheritance_tree(presets: CMakePresets, preset_type: str, preset_name
 
 
 def _show_preset_details(
-    presets: CMakePresets, found_preset: Dict[str, Any], found_type: str, preset_name: str, property_sources: Dict[str, str], is_flattened: bool
+    presets: CMakePresets,
+    found_preset: dict[str, Any],
+    found_type: str,
+    preset_name: str,
+    property_sources: dict[str, str],
+    is_flattened: bool,
 ) -> None:
     """Show detailed information about a preset."""
     table = Table(show_header=False, padding=(0, 1), box=None)
@@ -396,7 +408,7 @@ def _show_preset_details(
     console.print(table)
 
 
-def _map_all_properties(preset: Dict[str, Any], preset_name: str, property_sources: Dict[str, str], prefix: str = "") -> None:
+def _map_all_properties(preset: dict[str, Any], preset_name: str, property_sources: dict[str, str], prefix: str = "") -> None:
     """
     Map all properties and their sources, ensuring all nested fields are captured.
     """
@@ -417,7 +429,7 @@ def _map_all_properties(preset: Dict[str, Any], preset_name: str, property_sourc
             _map_list_properties(value, preset_name, property_sources, property_path)
 
 
-def _map_dict_properties(value: Dict[str, Any], preset_name: str, property_sources: Dict[str, str], property_path: str) -> None:
+def _map_dict_properties(value: dict[str, Any], preset_name: str, property_sources: dict[str, str], property_path: str) -> None:
     """Map properties in a dictionary."""
     for nested_key, nested_value in value.items():
         nested_path = f"{property_path}.{nested_key}"
@@ -428,7 +440,7 @@ def _map_dict_properties(value: Dict[str, Any], preset_name: str, property_sourc
             _map_all_properties({nested_key: nested_value}, preset_name, property_sources, f"{property_path}.")
 
 
-def _map_list_properties(value: List[Any], preset_name: str, property_sources: Dict[str, str], property_path: str) -> None:
+def _map_list_properties(value: list[Any], preset_name: str, property_sources: dict[str, str], property_path: str) -> None:
     """Map properties in a list."""
     for i, item in enumerate(value):
         if isinstance(item, dict):
@@ -442,7 +454,7 @@ def _map_list_properties(value: List[Any], preset_name: str, property_sources: D
                     _map_all_properties({item_key: item_value}, preset_name, property_sources, f"{item_path}.")
 
 
-def _add_properties_to_table(table: Table, preset: Dict[str, Any], property_sources: Dict[str, str], prefix: str = "", indent_level: int = 0) -> None:
+def _add_properties_to_table(table: Table, preset: dict[str, Any], property_sources: dict[str, str], prefix: str = "", indent_level: int = 0) -> None:
     """
     Add properties to the display table, with sources if available.
     """
@@ -471,7 +483,7 @@ def _add_properties_to_table(table: Table, preset: Dict[str, Any], property_sour
             _add_simple_property(table, key, value, source, indent)
 
 
-def _get_property_source(property_sources: Dict[str, str], property_path: str, preset: Dict[str, Any]) -> str:
+def _get_property_source(property_sources: dict[str, str], property_path: str, preset: dict[str, Any]) -> str:
     """Get the source of a property."""
     source = property_sources.get(property_path, "")
     if source and source == preset.get("name", ""):
@@ -486,7 +498,14 @@ def _add_bool_property(table: Table, key: str, value: bool, source: str, indent:
 
 
 def _add_dict_property(
-    table: Table, key: str, value: Dict[str, Any], property_sources: Dict[str, str], property_path: str, source: str, indent: str, indent_level: int
+    table: Table,
+    key: str,
+    value: dict[str, Any],
+    property_sources: dict[str, str],
+    property_path: str,
+    source: str,
+    indent: str,
+    indent_level: int,
 ) -> None:
     """Add a dictionary property to the table."""
     table.add_row(f"{indent}{key}", f"{indent}{{", source)
@@ -495,7 +514,14 @@ def _add_dict_property(
 
 
 def _add_list_property(
-    table: Table, key: str, value: List[Any], property_sources: Dict[str, str], property_path: str, source: str, indent: str, indent_level: int
+    table: Table,
+    key: str,
+    value: list[Any],
+    property_sources: dict[str, str],
+    property_path: str,
+    source: str,
+    indent: str,
+    indent_level: int,
 ) -> None:
     """Add a list property to the table."""
     if not value:
@@ -510,7 +536,14 @@ def _add_list_property(
 
 
 def _add_complex_list_property(
-    table: Table, key: str, value: List[Any], property_sources: Dict[str, str], property_path: str, source: str, indent: str, indent_level: int
+    table: Table,
+    key: str,
+    value: list[Any],
+    property_sources: dict[str, str],
+    property_path: str,
+    source: str,
+    indent: str,
+    indent_level: int,
 ) -> None:
     """Add a complex list property (containing dicts) to the table."""
     table.add_row(f"{indent}{key}", f"{indent}[", source)
@@ -531,7 +564,7 @@ def _add_simple_property(table: Table, key: str, value: Any, source: str, indent
 
 
 # Helper functions for the "related" command
-def _get_configure_preset(presets: CMakePresets, preset_name: str, show_error: bool = True) -> Optional[Dict[str, Any]]:
+def _get_configure_preset(presets: CMakePresets, preset_name: str, show_error: bool = True) -> dict[str, Any] | None:
     """Get a configure preset.
 
     Returns:
@@ -544,7 +577,7 @@ def _get_configure_preset(presets: CMakePresets, preset_name: str, show_error: b
     return configure_preset
 
 
-def _filter_presets_by_visibility(presets_list: List[Dict[str, Any]], show_hidden: bool) -> List[Dict[str, Any]]:
+def _filter_presets_by_visibility(presets_list: list[dict[str, Any]], show_hidden: bool) -> list[dict[str, Any]]:
     """Filter presets based on visibility settings."""
     if not show_hidden:
         return [p for p in presets_list if not p.get("hidden", False)]
@@ -563,7 +596,10 @@ def _filter_presets_by_visibility(presets_list: List[Dict[str, Any]], show_hidde
 
 
 def _print_rich_related_output(
-    configure_preset_name: str, related_presets: Dict[str, List[Dict[str, Any]]], preset_types: List[str], show_hidden: bool
+    configure_preset_name: str,
+    related_presets: dict[str, list[dict[str, Any]]],
+    preset_types: list[str],
+    show_hidden: bool,
 ) -> bool:
     """Print rich formatted output for related presets. Returns True if any presets were found."""
     console.print(f"Presets related to configurePreset: [bold green]{configure_preset_name}[/bold green]")
@@ -587,7 +623,7 @@ def _print_rich_related_output(
     return found_any
 
 
-def _get_available_preset_types(related_presets: Dict[str, List[Dict[str, Any]]], show_hidden: bool) -> List[str]:
+def _get_available_preset_types(related_presets: dict[str, list[dict[str, Any]]], show_hidden: bool) -> list[str]:
     """Get a list of available preset types that have at least one preset."""
     available_types = []
 
@@ -604,7 +640,7 @@ def _get_available_preset_types(related_presets: Dict[str, List[Dict[str, Any]]]
     return available_types
 
 
-def _get_preset_names_for_type(related_presets: Dict[str, List[Dict[str, Any]]], preset_type: str, show_hidden: bool) -> List[str]:
+def _get_preset_names_for_type(related_presets: dict[str, list[dict[str, Any]]], preset_type: str, show_hidden: bool) -> list[str]:
     """Get preset names for a specific preset type."""
     presets_list = related_presets.get(preset_type, [])
 
@@ -616,7 +652,7 @@ def _get_preset_names_for_type(related_presets: Dict[str, List[Dict[str, Any]]],
 
 
 # Simplified handler functions
-def _handle_related_plain_output(args: argparse.Namespace, related_presets: Dict[str, List[Dict[str, Any]]]) -> int:
+def _handle_related_plain_output(args: argparse.Namespace, related_presets: dict[str, list[dict[str, Any]]]) -> int:
     """Handle plain output mode for scripts."""
     if args.type == "all":
         # Get available types and print them

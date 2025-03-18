@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Any, Dict, Final, Union
+from typing import Any, Final
 
 from . import logger as mainLogger
 from .exceptions import FileParseError, FileReadError, VersionError
@@ -14,10 +14,11 @@ class Parser:
 
     def __init__(self) -> None:
         """Initialize the parser."""
-        self.loaded_files: Dict[str, Any] = {}  # Maps filenames to parsed JSON content
-        self.processed_files: set[str] = set()  # Set of already processed files
+        self.loaded_files: dict[str, Any] = {}  # Maps filenames to parsed JSON content
+        # Set of already processed files
+        self.processed_files: set[str] = set()
 
-    def parse_file(self, filepath: Union[str, Path]) -> None:
+    def parse_file(self, filepath: str | Path) -> None:
         """
         Parse a CMakePresets.json file and all included files.
 
@@ -75,9 +76,9 @@ class Parser:
         """
         logger.debug(f"Loading file: {filepath}")
         try:
-            with open(str(filepath), "r", encoding="utf-8") as f:
+            with open(str(filepath), encoding="utf-8") as f:
                 content = f.read()
-        except IOError as e:
+        except OSError as e:
             logger.error(f"Failed to read file: {filepath}, error: {e}")
             raise FileReadError(f"Unable to read file {filepath}: {e}")
 
@@ -98,7 +99,7 @@ class Parser:
         self.loaded_files[relative_path] = json_data
         logger.info(f"Successfully loaded file: {filepath}")
 
-    def _validate_version_requirements(self, file_path: str, data: Dict[str, Any]) -> int:
+    def _validate_version_requirements(self, file_path: str, data: dict[str, Any]) -> int:
         """
         Validate version and cmakeMinimumRequired fields in a CMakePresets file.
 
@@ -140,7 +141,8 @@ class Parser:
                 continue
 
             current_data = self.loaded_files[current_file]
-            current_dir = Path(current_file).parent  # relative directory of current_file
+            # relative directory of current_file
+            current_dir = Path(current_file).parent
             logger.debug(f"Processing includes for file: {current_file}")
 
             # Process includes if present

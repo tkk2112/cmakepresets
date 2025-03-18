@@ -206,7 +206,7 @@ def test_find_preset() -> None:
         "buildPresets": [{"name": "nested-build", "configurePreset": "nested"}]
     }
     """,
-    }
+    },
 )
 def test_presets_with_includes() -> None:
     """Test that presets from included files are also retrieved."""
@@ -239,7 +239,7 @@ def test_presets_with_includes() -> None:
         "configurePresets": [{"name": "user", "generator": "Ninja"}]
     }
     """,
-    }
+    },
 )
 def test_user_presets_are_included() -> None:
     """Test that CMakeUserPresets.json is automatically included."""
@@ -303,7 +303,8 @@ def test_flatten_preset() -> None:
     flattened = presets.flatten_preset("configure", "extended")
     assert flattened["name"] == "extended"
     assert flattened["generator"] == "Ninja"
-    assert flattened["cacheVariables"]["VAR1"] == "overridden_value"  # Should use overridden value
+    # Should use overridden value
+    assert flattened["cacheVariables"]["VAR1"] == "overridden_value"
     assert flattened["cacheVariables"]["VAR2"] == "debug_value"
     assert flattened["cacheVariables"]["VAR3"] == "extended_value"
 
