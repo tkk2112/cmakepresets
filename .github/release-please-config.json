@@ -10,9 +10,9 @@
       "draft": false,
       "prerelease": false,
       "extra-files": [
+        "src/cmakepresets/__init__.py",
         "README.md"
-      ],
-      "version-file": "src/cmakepresets/__init__.py"
+      ]
     }
   },
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
