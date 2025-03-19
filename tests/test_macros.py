@@ -35,7 +35,7 @@ def test_basic_macro_resolution() -> None:
 def test_file_based_macro_resolution() -> None:
     """Test resolving macros relative to a CMakePresets.json file."""
     # Create resolver with a path to CMakePresets.json (using second positional arg)
-    resolver = MacroResolver("", "/path/to/project/CMakePresets.json")
+    resolver = MacroResolver("/path/to/project/CMakePresets.json")
     context = resolver._create_basic_context({"name": "test-preset"})
 
     # Source directory should be the directory containing CMakePresets.json

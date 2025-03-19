@@ -12,29 +12,22 @@ logger = mainLogger.getChild(__name__)
 class MacroResolver:
     """Class for resolving macros in CMake preset values."""
 
-    def __init__(self, presets_file_path: str = "", cmake_presets_file: str = ""):
+    def __init__(self, path: str = ""):
         """
         Initialize the macro resolver.
 
         Args:
-            presets_file_path: Path to the CMakePresets.json file. If provided,
-                               its directory is used as the source directory.
-            cmake_presets_file: Alternative way to specify the path
+            path: Path to a CMakePresets.json file or to its directory.
+                  If it ends with '.json', its directory is used.
         """
-        # Use cmake_presets_file if provided, otherwise use positional arg
-        actual_path = cmake_presets_file or presets_file_path
-
-        if actual_path:
-            # If the path ends with '.json', treat it as a file and use its directory.
-            if actual_path.endswith(".json"):
-                self.source_dir = os.path.abspath(os.path.dirname(actual_path))
+        if path:
+            if path.endswith(".json"):
+                self.source_dir = os.path.abspath(os.path.dirname(path))
             else:
-                self.source_dir = os.path.abspath(actual_path)
+                self.source_dir = os.path.abspath(path)
         else:
             self.source_dir = os.path.abspath(os.getcwd())
-
-        # Store the presets file path for context
-        self.presets_file_path = actual_path
+        self.presets_file_path = path
 
     def _normalize_path(self, path: str) -> str:
         """
@@ -120,32 +113,31 @@ class MacroResolver:
                 preset[key] = self._resolve_recursive(value, context)
 
     def _process_paths(self, preset: dict[str, Any], relative_paths: bool) -> None:
-        """Process path fields to handle normalization and relative paths."""
-        # Known path fields in presets
-        path_fields = self._find_path_fields(preset)
+        # Determine the base directory from the presets file location
+        if self.presets_file_path:
+            if os.path.isdir(self.presets_file_path):
+                base_dir = os.path.abspath(self.presets_file_path)
+            else:
+                base_dir = os.path.abspath(os.path.dirname(self.presets_file_path))
+        else:
+            base_dir = os.getcwd()
 
+        path_fields = self._find_path_fields(preset)
         for field_path in path_fields:
-            # Get the value using the field path
             value = self._get_nested_value(preset, field_path)
             if not isinstance(value, str):
                 continue
-
-            # Make absolute and normalize
-            if not os.path.isabs(value):
-                value = os.path.join(self.source_dir, value)
-            value = self._normalize_path(value)
-
-            # Update the value
-            self._set_nested_value(preset, field_path, value)
-
-            # Make relative if requested
+            # Always normalize: if value is absolute, normalize it; otherwise join and normalize.
+            if value.startswith("/"):
+                new_value = os.path.normpath(value)
+            else:
+                new_value = os.path.normpath(os.path.join(base_dir, value))
             if relative_paths:
                 try:
-                    rel_path = os.path.relpath(value, self.source_dir)
-                    self._set_nested_value(preset, field_path, rel_path)
+                    new_value = os.path.relpath(new_value, base_dir)
                 except (ValueError, OSError):
-                    # If relpath fails, keep absolute
                     pass
+            self._set_nested_value(preset, field_path, new_value)
 
     def _find_path_fields(self, preset: dict[str, Any]) -> list[tuple[str, ...]]:
         """Find fields in the preset that appear to be paths."""
@@ -307,22 +299,18 @@ class MacroResolver:
         return result
 
 
-def create_resolver(source_dir: str = "", cmake_presets_file: str = "") -> MacroResolver:
+def create_resolver(source_dir: str = "") -> MacroResolver:
     """
     Create a new MacroResolver instance.
 
     Args:
-        source_dir: Source directory path
-        cmake_presets_file: Path to the CMakePresets.json file
+        source_dir: If the given path ends with '.json' it is treated as a file; otherwise as a directory.
 
     Returns:
-        A new MacroResolver instance
+        A new MacroResolver instance.
     """
-    if cmake_presets_file:
-        return MacroResolver("", cmake_presets_file)
-    elif source_dir:
-        # Create a fake CMakePresets.json path to set source_dir correctly
-        return MacroResolver(os.path.join(source_dir, "CMakePresets.json"))
+    if source_dir:
+        return MacroResolver(source_dir)
     else:
         return MacroResolver()
 
@@ -352,7 +340,7 @@ def resolve_macros_in_preset(
         A new preset with all macros resolved
     """
     if cmake_presets_file:
-        resolver = MacroResolver("", cmake_presets_file)
+        resolver = MacroResolver(cmake_presets_file)
     elif source_dir:
         resolver = MacroResolver(os.path.join(source_dir, "CMakePresets.json"))
     else:
