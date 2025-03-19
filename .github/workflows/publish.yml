@@ -51,7 +51,6 @@ jobs:
 
       - name: "publish module (index: ${{ github.event.inputs.target || 'pypi' }})"
         env:
-          UV_PUBLISH_URL: ${{ vars.UV_PUBLISH_URL }}
-          UV_PUBLISH_CHECK_URL: ${{ vars.UV_PUBLISH_CHECK_URL }}
+          UV_PUBLISH_INDEX: ${{ github.event.inputs.target || 'pypi' }}
         run: |
           uv publish --trusted-publishing always
