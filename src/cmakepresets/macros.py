@@ -133,45 +133,24 @@ class MacroResolver:
         return value
 
     def resolve_string(self, value: str, context: dict[str, Any]) -> str:
-        """
-        Resolve macros in a string based on the provided context.
+        def replace_macro(match: re.Match[str]) -> str:
+            macro_name: str = match.group(1)
+            return str(context.get(macro_name, match.group(0)))
 
-        Args:
-            value: String potentially containing macros
-            context: Dictionary with macro values
+        def replace_env(match: re.Match[str]) -> str | Any:
+            env_name: str = match.group(1)
+            return context.get("env", {}).get(env_name, "")
 
-        Returns:
-            String with resolved macros
-        """
-        result = value
+        def replace_penv(match: re.Match[str]) -> str | Any:
+            env_name: str = match.group(1)
+            return context.get("penv", {}).get(env_name, "")
 
-        # Process standard macros like ${sourceDir}
-        for match in re.finditer(r"\${([^}]+)}", value):
-            macro_name = match.group(1)
-            if macro_name in context:
-                result = result.replace(f"${{{macro_name}}}", str(context[macro_name]))
-
-        # Process environment variables like $env{PATH}
-        for match in re.finditer(r"\$env{([^}]+)}", value):
-            env_name = match.group(1)
-            if "env" in context and env_name in context["env"]:
-                result = result.replace(f"$env{{{env_name}}}", context["env"].get(env_name, ""))
-            else:
-                result = result.replace(f"$env{{{env_name}}}", "")
-
-        # Process parent environment variables like $penv{PATH}
-        for match in re.finditer(r"\$penv{([^}]+)}", value):
-            env_name = match.group(1)
-            if "penv" in context and env_name in context["penv"]:
-                result = result.replace(f"$penv{{{env_name}}}", context["penv"].get(env_name, ""))
-            else:
-                result = result.replace(f"$penv{{{env_name}}}", "")
-
-        # We identify but don't actually resolve vendor macros
-        vendor_macros = re.findall(r"\$vendor{([^}]+)}", value)
-        if vendor_macros:
+        result = re.sub(r"\${([^}]+)}", replace_macro, value)
+        result = re.sub(r"\$env{([^}]+)}", replace_env, result)
+        result = re.sub(r"\$penv{([^}]+)}", replace_penv, result)
+        if re.search(r"\$vendor{([^}]+)}", result):
+            vendor_macros = re.findall(r"\$vendor{([^}]+)}", result)
             logger.warning(f"String contains vendor macros which cannot be resolved: {vendor_macros}")
-
         return result
 
 

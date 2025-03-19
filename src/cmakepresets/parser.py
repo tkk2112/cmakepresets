@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any, Final
 
 from . import logger as mainLogger
+from . import utils
 from .exceptions import FileParseError, FileReadError, VersionError
 from .schema import check_cmake_version_for_schema, get_schema, validate_json_against_schema
 
@@ -76,8 +77,7 @@ class Parser:
         """
         logger.debug(f"Loading file: {filepath}")
         try:
-            with open(str(filepath), encoding="utf-8") as f:
-                content = f.read()
+            content = utils.read_file_text(filepath)
         except OSError as e:
             logger.error(f"Failed to read file: {filepath}, error: {e}")
             raise FileReadError(f"Unable to read file {filepath}: {e}")
@@ -88,9 +88,8 @@ class Parser:
             logger.error(f"Failed to parse JSON in file: {filepath}, error: {e}")
             raise FileParseError(f"Unable to parse JSON in {filepath}: {e}")
 
-        # Store file content with key relative to self.root_dir
         try:
-            relative_path = str(filepath.relative_to(self.root_dir))
+            relative_path = utils.get_relative_path(self.root_dir, filepath)
         except ValueError:
             # If the path is not relative to root_dir, use the full path as the key
             relative_path = str(filepath)

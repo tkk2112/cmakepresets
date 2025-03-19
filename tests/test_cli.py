@@ -7,7 +7,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from rich.table import Table
 
-from cmakepresets import cli
+from cmakepresets import __name__, cli
+from cmakepresets.constants import BUILD, CONFIGURE, TEST
 from cmakepresets.presets import CMakePresets
 
 from .decorators import CMakePresets_json
@@ -90,13 +91,13 @@ def test_create_parser() -> None:
 
 def test_get_presets_by_type(mock_presets: MagicMock) -> None:
     """Test getting presets of different types."""
-    result = cli.get_presets_by_type(mock_presets, "configure")
+    result = cli.get_presets_by_type(mock_presets, CONFIGURE)
     assert result == mock_presets.configure_presets
 
-    result = cli.get_presets_by_type(mock_presets, "build")
+    result = cli.get_presets_by_type(mock_presets, BUILD)
     assert result == mock_presets.build_presets
 
-    result = cli.get_presets_by_type(mock_presets, "test")
+    result = cli.get_presets_by_type(mock_presets, TEST)
     assert result == mock_presets.test_presets
 
     # Test unknown type
@@ -141,9 +142,9 @@ def test_filter_presets() -> None:
 """)
 def test_handle_list_command_flat(mock_console_print: MagicMock) -> None:
     """Test the list command with flat output."""
-    args = argparse.Namespace(file="CMakePresets.json", directory=None, command="list", type="configure", show_hidden=False, flat=True, verbose=10)
+    args = argparse.Namespace(file="CMakePresets.json", directory=None, command="list", type=CONFIGURE, show_hidden=False, flat=True, verbose=10)
 
-    with patch("sys.argv", ["cmakepresets", "-vvvv", "list", "--type", "configure", "--flat"]):
+    with patch("sys.argv", [__name__, "-vvvv", "list", "--type", CONFIGURE, "--flat"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 
@@ -178,7 +179,7 @@ def test_handle_list_command_tabular(mock_console_print: MagicMock) -> None:
     """Test the list command with tabular output."""
     args = argparse.Namespace(file="CMakePresets.json", directory=None, command="list", type="all", show_hidden=False, flat=False, verbose=0)
 
-    with patch("sys.argv", ["cmakepresets", "list", "--type", "all"]):
+    with patch("sys.argv", [__name__, "list", "--type", "all"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 
@@ -207,14 +208,14 @@ def test_handle_show_command(mock_console_print: MagicMock) -> None:
         directory=None,
         command="show",
         preset_name="default",
-        type="configure",
+        type=CONFIGURE,
         json=False,
         flatten=False,
         resolve=False,
         verbose=0,
     )
 
-    with patch("sys.argv", ["cmakepresets", "show", "default", "--type", "configure"]):
+    with patch("sys.argv", [__name__, "show", "default", "--type", CONFIGURE]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 
@@ -260,7 +261,7 @@ def test_handle_show_command_not_found(mock_console_print: MagicMock) -> None:
         verbose=0,
     )
 
-    with patch("sys.argv", ["cmakepresets", "show", "nonexistent"]):
+    with patch("sys.argv", [__name__, "show", "nonexistent"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 
@@ -300,7 +301,7 @@ def test_handle_related_command(mock_console_print: MagicMock) -> None:
         verbose=0,
     )
 
-    with patch("sys.argv", ["cmakepresets", "related", "default", "--type", "all"]):
+    with patch("sys.argv", [__name__, "related", "default", "--type", "all"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 
@@ -316,8 +317,8 @@ def test_handle_related_command(mock_console_print: MagicMock) -> None:
             mock_console_print.reset_mock()
 
             # Test with specific type
-            args.type = "build"
-            with patch("sys.argv", ["cmakepresets", "related", "default", "--type", "build"]):
+            args.type = BUILD
+            with patch("sys.argv", [__name__, "related", "default", "--type", BUILD]):
                 with patch("argparse.ArgumentParser.parse_args", return_value=args):
                     result = cli.main()
 
@@ -355,7 +356,7 @@ def test_handle_related_command_plain_output(mock_console_print: MagicMock) -> N
         verbose=0,
     )
 
-    with patch("sys.argv", ["cmakepresets", "related", "default", "--plain"]):
+    with patch("sys.argv", [__name__, "related", "default", "--plain"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             with patch("builtins.print") as mock_print:
                 result = cli.main()
@@ -364,8 +365,8 @@ def test_handle_related_command_plain_output(mock_console_print: MagicMock) -> N
                 mock_print.assert_called_once()
                 # Should print available types
                 output = mock_print.call_args[0][0]
-                assert "build" in output
-                assert "test" in output
+                assert BUILD in output
+                assert TEST in output
 
 
 @CMakePresets_json("""
@@ -390,7 +391,7 @@ def test_handle_related_command_not_found(mock_console_print: MagicMock) -> None
         verbose=0,
     )
 
-    with patch("sys.argv", ["cmakepresets", "related", "nonexistent"]):
+    with patch("sys.argv", [__name__, "related", "nonexistent"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 
@@ -412,9 +413,9 @@ def test_handle_related_command_not_found(mock_console_print: MagicMock) -> None
 """)
 def test_main_with_list_command(mock_console_print: MagicMock) -> None:
     """Test the main function with list command."""
-    args = argparse.Namespace(file="CMakePresets.json", directory=None, command="list", type="configure", show_hidden=False, flat=False, verbose=0)
+    args = argparse.Namespace(file="CMakePresets.json", directory=None, command="list", type=CONFIGURE, show_hidden=False, flat=False, verbose=0)
 
-    with patch("sys.argv", ["cmakepresets", "list"]):
+    with patch("sys.argv", [__name__, "list"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 
@@ -437,9 +438,9 @@ def test_main_with_list_command(mock_console_print: MagicMock) -> None:
 def test_main_error_handling(mock_console_print: MagicMock) -> None:
     """Test main function error handling."""
     # Create a situation that would cause an exception
-    args = argparse.Namespace(file="NonExistentFile.json", directory=None, command="list", type="configure", show_hidden=False, flat=False, verbose=0)
+    args = argparse.Namespace(file="NonExistentFile.json", directory=None, command="list", type=CONFIGURE, show_hidden=False, flat=False, verbose=0)
 
-    with patch("sys.argv", ["cmakepresets", "--file", "NonExistentFile.json", "list"]):
+    with patch("sys.argv", [__name__, "--file", "NonExistentFile.json", "list"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 
@@ -473,7 +474,7 @@ def test_integration_list_command(mock_console_print: MagicMock) -> None:
     # Create CLI arguments
     args = argparse.Namespace(file="CMakePresets.json", directory=None, command="list", type="all", show_hidden=False, flat=True, verbose=0)
 
-    with patch("sys.argv", ["cmakepresets", "--file", "CMakePresets.json", "list"]):
+    with patch("sys.argv", [__name__, "--file", "CMakePresets.json", "list"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 
@@ -504,14 +505,14 @@ def test_integration_show_command(mock_console_print: MagicMock) -> None:
         directory=None,
         command="show",
         preset_name="derived",
-        type="configure",
+        type=CONFIGURE,
         json=True,
         flatten=True,
         resolve=False,
         verbose=0,
     )
 
-    with patch("sys.argv", ["cmakepresets", "--file", "CMakePresets.json", "show", "derived", "--json"]):
+    with patch("sys.argv", [__name__, "--file", "CMakePresets.json", "show", "derived", "--json"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 
@@ -558,7 +559,7 @@ def test_integration_related_command(mock_console_print: MagicMock) -> None:
         verbose=0,
     )
 
-    with patch("sys.argv", ["cmakepresets", "--file", "CMakePresets.json", "related", "default"]):
+    with patch("sys.argv", [__name__, "--file", "CMakePresets.json", "related", "default"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 
@@ -603,7 +604,7 @@ def test_handle_show_command_with_resolve(mock_console_print: MagicMock) -> None
         verbose=0,
     )
 
-    with patch("sys.argv", ["cmakepresets", "show", "macro-test", "--resolve", "--json"]):
+    with patch("sys.argv", [__name__, "show", "macro-test", "--resolve", "--json"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 

@@ -7,6 +7,7 @@ import requests
 
 from . import logger as mainLogger
 from .exceptions import SchemaDownloadError, VersionError
+from .utils import read_file_text, write_file_text
 
 logger: Final = mainLogger.getChild(__name__)
 
@@ -56,8 +57,7 @@ def get_schema(version: int) -> dict[str, Any]:
     if cache_file.exists():
         try:
             logger.debug(f"Found cached schema at {cache_file}")
-            with open(cache_file, encoding="utf-8") as f:
-                schema: dict[str, Any] = json.load(f)
+            schema: dict[str, Any] = json.loads(read_file_text(cache_file))
 
             # Check if the cached schema supports the requested version
             if schema_has_version(schema, version):
@@ -94,8 +94,7 @@ def get_schema(version: int) -> dict[str, Any]:
 
         # Save the downloaded schema to the cache
         cache_dir.mkdir(parents=True, exist_ok=True)
-        with open(cache_file, "w", encoding="utf-8") as f:
-            json.dump(schema, f)
+        write_file_text(cache_file, json.dumps(schema))
         logger.debug(f"Saved schema to cache at {cache_file}")
 
         logger.info(f"Successfully retrieved schema for version {version}")
@@ -150,8 +149,7 @@ def get_latest_master_schema(force_download: bool = False) -> dict[str, Any]:
     if not force_download and cache_file.exists():
         try:
             logger.debug(f"Using cached master schema from {cache_file}")
-            with open(cache_file, encoding="utf-8") as f:
-                return cast(dict[str, Any], json.load(f))
+            return cast(dict[str, Any], json.loads(read_file_text(cache_file)))
         except (OSError, json.JSONDecodeError) as e:
             logger.debug(f"Error reading cached master schema: {e}")
             # If there's an error reading the cache, we'll download a new one
@@ -169,8 +167,7 @@ def get_latest_master_schema(force_download: bool = False) -> dict[str, Any]:
 
         # Save the downloaded schema to the cache
         cache_dir.mkdir(parents=True, exist_ok=True)
-        with open(cache_file, "w", encoding="utf-8") as f:
-            json.dump(schema, f)
+        write_file_text(cache_file, json.dumps(schema))
         logger.debug(f"Saved master schema to cache at {cache_file}")
 
         return schema

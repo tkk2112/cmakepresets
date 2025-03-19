@@ -28,6 +28,7 @@ pip install cmakepresets
 
 ```python
 from cmakepresets import CMakePresets
+from cmakepresets.constants import CONFIGURE
 
 # Load presets from a file or directory
 presets = CMakePresets("path/to/CMakePresets.json")
@@ -39,13 +40,13 @@ configure_presets = presets.configure_presets
 build_presets = presets.build_presets
 
 # Get preset by name
-preset = presets.get_preset_by_name("configure", "my-preset")
+preset = presets.get_preset_by_name(CONFIGURE, "my-preset")
 
 # Get preset tree showing hierarchical relationships
 preset_tree = presets.get_preset_tree()
 
 # Get flattened preset with all inherited properties resolved
-flattened = presets.flatten_preset("configure", "my-preset")
+flattened = presets.flatten_preset(CONFIGURE, "my-preset")
 ```
 
 

@@ -1,9 +1,8 @@
-"""Tests for the macro resolution functionality."""
-
 import os
 import platform
 from unittest.mock import patch
 
+from cmakepresets.constants import CONFIGURE, TEST
 from cmakepresets.macros import MacroResolver, resolve_macros_in_preset, resolve_macros_in_string
 
 
@@ -39,7 +38,7 @@ def test_environment_macros() -> None:
 
         # Create context with environment data
         preset = {"name": "env-test", "environment": {"CUSTOM_VAR": "custom-value"}}
-        context = resolver._build_context(preset, "configure")
+        context = resolver._build_context(preset, CONFIGURE)
 
         # Test $env macro with system environment
         assert resolver.resolve_string("$env{PATH}", context) == "/usr/bin"
@@ -88,7 +87,7 @@ def test_resolve_in_preset() -> None:
     }
 
     # Resolve macros in the preset
-    resolved = resolver.resolve_in_preset(preset, "configure")
+    resolved = resolver.resolve_in_preset(preset, CONFIGURE)
 
     # Check that the basic structure is preserved
     assert resolved["name"] == "test-preset"
@@ -107,10 +106,10 @@ def test_resolve_in_preset() -> None:
 def test_convenience_functions() -> None:
     """Test the module-level convenience functions."""
     # Test string resolution
-    context = {"name": "test", "value": 42}
+    context = {"name": TEST, "value": 42}
     assert resolve_macros_in_string("${name} has value ${value}", context) == "test has value 42"
 
     # Test preset resolution
     preset = {"name": "quick-test", "binaryDir": "${sourceDir}/build"}
-    resolved = resolve_macros_in_preset(preset, "configure", "/custom/source")
+    resolved = resolve_macros_in_preset(preset, CONFIGURE, "/custom/source")
     assert resolved["binaryDir"] == "/custom/source/build"

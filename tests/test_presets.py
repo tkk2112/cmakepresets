@@ -4,6 +4,7 @@ import platform
 import pytest
 from pyfakefs.fake_filesystem_unittest import Patcher
 
+from cmakepresets.constants import BUILD, CONFIGURE, PACKAGE, TEST
 from cmakepresets.presets import CMakePresets
 
 from .decorators import CMakePresets_json
@@ -155,12 +156,12 @@ def test_get_preset_by_name() -> None:
     presets = CMakePresets("CMakePresets.json")
 
     # Find existing preset
-    configure_preset = presets.get_preset_by_name("configure", "default")
+    configure_preset = presets.get_preset_by_name(CONFIGURE, "default")
     assert configure_preset is not None
     assert configure_preset["name"] == "default"
 
     # Find non-existent preset
-    nonexistent = presets.get_preset_by_name("build", "nonexistent")
+    nonexistent = presets.get_preset_by_name(BUILD, "nonexistent")
     assert nonexistent is None
 
 
@@ -278,12 +279,12 @@ def test_get_preset_inheritance_chain() -> None:
     presets = CMakePresets("CMakePresets.json")
 
     # Test inheritance chain for debug preset which inherits from base
-    chain = presets.get_preset_inheritance_chain("configure", "debug")
+    chain = presets.get_preset_inheritance_chain(CONFIGURE, "debug")
     assert len(chain) == 1
     assert chain[0]["name"] == "base"
 
     # Test preset with no inheritance
-    chain = presets.get_preset_inheritance_chain("configure", "base")
+    chain = presets.get_preset_inheritance_chain(CONFIGURE, "base")
     assert len(chain) == 0
 
 
@@ -303,7 +304,7 @@ def test_flatten_preset() -> None:
     presets = CMakePresets("CMakePresets.json")
 
     # Test flattening a preset with multiple levels of inheritance
-    flattened = presets.flatten_preset("configure", "extended")
+    flattened = presets.flatten_preset(CONFIGURE, "extended")
     assert flattened["name"] == "extended"
     assert flattened["generator"] == "Ninja"
     # Should use overridden value
@@ -337,7 +338,7 @@ def test_get_dependent_presets() -> None:
     """Test getting presets dependent on a specific preset."""
     presets = CMakePresets("CMakePresets.json")
 
-    dependents = presets.get_dependent_presets("configure", "base")
+    dependents = presets.get_dependent_presets(CONFIGURE, "base")
     assert len(dependents["buildPresets"]) == 1
     assert dependents["buildPresets"][0]["name"] == "base-build"
     assert len(dependents["testPresets"]) == 1
@@ -367,7 +368,7 @@ def test_get_dependent_presets_with_inheritance() -> None:
     """Test getting presets dependent on a configure preset through inheritance."""
     presets = CMakePresets("CMakePresets.json")
 
-    dependents = presets.get_dependent_presets("configure", "base")
+    dependents = presets.get_dependent_presets(CONFIGURE, "base")
 
     # Check build presets
     assert len(dependents["buildPresets"]) == 3
@@ -400,16 +401,16 @@ def test_hidden_not_inherited_when_flattening() -> None:
     presets = CMakePresets("CMakePresets.json")
 
     # Base preset is marked as hidden
-    base = presets.get_preset_by_name("configure", "base")
+    base = presets.get_preset_by_name(CONFIGURE, "base")
     assert base is not None  # Make sure base is not None before indexing
     assert base["hidden"] is True
 
     # Debug preset inherits from base but should not inherit hidden property
-    flattened_debug = presets.flatten_preset("configure", "debug")
+    flattened_debug = presets.flatten_preset(CONFIGURE, "debug")
     assert "hidden" not in flattened_debug
 
     # Extended preset explicitly sets hidden=true
-    flattened_extended = presets.flatten_preset("configure", "extended")
+    flattened_extended = presets.flatten_preset(CONFIGURE, "extended")
     assert flattened_extended["hidden"] is True
 
     # Check that non-hidden properties are still inherited properly
@@ -450,23 +451,23 @@ def test_find_related_presets() -> None:
     # Test finding all related presets
     related = presets.find_related_presets("base")
     assert related is not None
-    assert len(related["build"]) == 2
-    assert len(related["test"]) == 1
-    assert len(related["package"]) == 2
+    assert len(related[BUILD]) == 2
+    assert len(related[TEST]) == 1
+    assert len(related[PACKAGE]) == 2
 
     # Test finding only build presets
-    build_related = presets.find_related_presets("base", "build")
+    build_related = presets.find_related_presets("base", BUILD)
     assert build_related is not None
-    assert "build" in build_related
-    assert len(build_related["build"]) == 2
-    assert list(build_related.keys()) == ["build"]
+    assert BUILD in build_related
+    assert len(build_related[BUILD]) == 2
+    assert list(build_related.keys()) == [BUILD]
 
     # Test finding related presets for a preset with no dependents
     empty_related = presets.find_related_presets("empty")
     assert empty_related is not None
-    assert len(empty_related["build"]) == 0
-    assert len(empty_related["test"]) == 0
-    assert len(empty_related["package"]) == 0
+    assert len(empty_related[BUILD]) == 0
+    assert len(empty_related[TEST]) == 0
+    assert len(empty_related[PACKAGE]) == 0
 
     # Test nonexistent preset
     nonexistent_related = presets.find_related_presets("nonexistent")
@@ -503,7 +504,7 @@ def test_resolve_macro_values() -> None:
     presets = CMakePresets("CMakePresets.json")
 
     # Get the preset with macros resolved
-    resolved = presets.resolve_macro_values("configure", "with-macros")
+    resolved = presets.resolve_macro_values(CONFIGURE, "with-macros")
 
     # Verify the basic preset properties were preserved
     assert resolved["name"] == "with-macros"
@@ -550,7 +551,7 @@ def test_resolve_nested_macro_values() -> None:
     presets = CMakePresets("CMakePresets.json")
 
     # Get the preset with macros resolved
-    resolved = presets.resolve_macro_values("configure", "with-nested-macros")
+    resolved = presets.resolve_macro_values(CONFIGURE, "with-nested-macros")
 
     # Verify nested macros in environment are resolved
     source_dir = os.getcwd()  # In the test environment
@@ -578,7 +579,7 @@ def test_resolve_vendor_macro_values() -> None:
     presets = CMakePresets("CMakePresets.json")
 
     # Get the preset with macros resolved
-    resolved = presets.resolve_macro_values("configure", "with-vendor-macros")
+    resolved = presets.resolve_macro_values(CONFIGURE, "with-vendor-macros")
 
     # Verify vendor macros are left as-is
     assert resolved["binaryDir"] == "$vendor{xide.buildDir}"

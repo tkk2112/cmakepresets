@@ -45,11 +45,11 @@ jobs:
         run: |
           uv sync --locked
 
-      - name: build module
+      - name: build package
         run: |
           uv build
 
-      - name: "publish module (index: ${{ github.event.inputs.target || 'pypi' }})"
+      - name: "publish package (index: ${{ github.event.inputs.target || 'pypi' }})"
         env:
           UV_PUBLISH_INDEX: ${{ github.event.inputs.target || 'pypi' }}
         run: |

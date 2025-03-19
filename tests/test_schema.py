@@ -5,8 +5,9 @@ import jsonschema.exceptions
 import pytest
 
 from cmakepresets import log, logger
+from cmakepresets.constants import TEST
 from cmakepresets.exceptions import VersionError
-from cmakepresets.schema import check_cmake_version_for_schema, get_schema, validate_json_against_schema
+from cmakepresets.schema import schema_has_version, check_cmake_version_for_schema, get_schema, validate_json_against_schema
 
 
 def test_get_schema() -> None:
@@ -37,6 +38,12 @@ def test_get_schema() -> None:
     assert in_schema(version, "testPresets", schema)
     assert in_schema(version, "packagePresets", schema)
     assert in_schema(version, "workflowPresets", schema)
+
+
+@pytest.mark.parametrize("version,expected", [(2, True), (10, True), (100, False)])
+def test_schema_versions(version, expected):
+    schema = get_schema(version if expected else 10)
+    assert schema_has_version(schema, version) is expected
 
 
 def test_schema_getter() -> None:
@@ -80,7 +87,7 @@ def test_validate_testpresets_field_version_compatibility() -> None:
     """Test that using testPresets field with incompatible version gives clear error."""
     schema = get_schema(3)  # Get schema that supports version 3
 
-    valid_data = {"version": 3, "cmakeMinimumRequired": {"major": 3, "minor": 20, "patch": 0}, "testPresets": [{"name": "test"}]}
+    valid_data = {"version": 3, "cmakeMinimumRequired": {"major": 3, "minor": 20, "patch": 0}, "testPresets": [{"name": TEST}]}
     validate_json_against_schema(valid_data, schema)  # Should not raise
 
     invalid_data = {"version": 2, "cmakeMinimumRequired": {"major": 3, "minor": 20, "patch": 0}, "include": []}
