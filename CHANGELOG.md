@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0](https://github.com/tkk2112/cmakepresets/compare/v0.2.6...v0.3.0) (2025-03-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* missing s on project script
+
+### Bug Fixes
+
+* missing s on project script ([94da3e4](https://github.com/tkk2112/cmakepresets/commit/94da3e4104850337d9cdaa0c07b60f1ebe5c595f))
+
 ## [0.2.6](https://github.com/tkk2112/cmakepresets/compare/v0.2.5...v0.2.6) (2025-03-18)
 
 
