@@ -1,4 +1,3 @@
-import os
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, Final, cast
@@ -338,29 +337,18 @@ class CMakePresets:
         """
         flattened = self.flatten_preset(preset_type, preset_name)
 
-        if absolute_paths:
-            # Use absolute paths (original behavior)
-            return resolve_macros_in_preset(
-                flattened,
-                preset_type,
-            )
-        else:
-            # Use paths relative to CMakePresets.json
-            resolved = resolve_macros_in_preset(
-                flattened,
-                preset_type,
-                str(self.file_path.parent),
-            )
+        # Get file paths to provide context for macros
+        preset_file_paths = self._get_preset_file_paths()
 
-            # For relative paths, strip the source directory prefix from paths
-            # that start with the source directory
-            if "binaryDir" in resolved and isinstance(resolved["binaryDir"], str):
-                src_dir = os.path.abspath(os.path.dirname(self.file_path))
-                if resolved["binaryDir"].startswith(src_dir):
-                    # +1 to remove the leading slash
-                    resolved["binaryDir"] = resolved["binaryDir"][len(src_dir) + 1 :]
-
-            return resolved
+        # Use the updated API with positional arguments
+        return resolve_macros_in_preset(
+            flattened,
+            preset_type,
+            "",  # Empty source_dir
+            str(self.file_path),
+            not absolute_paths,
+            preset_file_paths,
+        )
 
     def _get_preset_file_paths(self) -> dict[str, str]:
         """Get mapping of preset names to their containing file paths."""
