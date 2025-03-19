@@ -8,12 +8,12 @@ from rich.tree import Tree
 
 from . import console, log
 from . import logger as mainLogger
-from .presets import CMakePresets
+from .presets import CMakePresets, PRESET_TYPES
 
 logger: Final = mainLogger.getChild(__name__)
 
 # Base preset type names without "Presets" suffix for CLI
-CLI_PRESET_TYPES: Final = ["configure", "build", "test", "package", "workflow"]
+CLI_PRESET_TYPES: Final = [type for type in PRESET_TYPES]
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -36,7 +36,7 @@ def create_parser() -> argparse.ArgumentParser:
     list_parser.add_argument(
         "--type",
         "-t",
-        choices=["configure", "build", "test", "package", "workflow"],
+        choices=CLI_PRESET_TYPES,
         default="all",
         help="Type of presets to list (default: all)",
     )
