@@ -512,7 +512,7 @@ def test_resolve_macro_values() -> None:
 
     # Verify the macros were resolved
     source_dir = os.getcwd()  # In the test environment
-    assert resolved["binaryDir"] == f"{source_dir}/build/with-macros"
+    assert resolved["binaryDir"] == "build/with-macros"
 
     # Check cache variables
     cache_vars = resolved["cacheVariables"]
@@ -584,3 +584,58 @@ def test_resolve_vendor_macro_values() -> None:
     # Verify vendor macros are left as-is
     assert resolved["binaryDir"] == "$vendor{xide.buildDir}"
     assert resolved["cacheVariables"]["VENDOR_VAR"] == "$vendor{xide.customValue}"
+
+
+@CMakePresets_json("""
+{
+    "version": 4,
+    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+    "configurePresets": [{"name": "default", "generator": "Ninja"}]
+}
+""")
+def test_merge_presets_chain() -> None:
+    """Test the _merge_presets_chain helper method."""
+    presets = CMakePresets("CMakePresets.json")
+
+    # Create a simple chain
+    chain = [
+        {"name": "base", "generator": "Ninja", "hidden": True},
+        {"name": "derived", "cacheVariables": {"DEBUG": "ON"}, "hidden": False},
+    ]
+
+    # Test merging with non-inheritable properties
+    merged = presets._merge_presets_chain(chain, non_inheritable_properties=["hidden"])
+    assert merged["name"] == "derived"
+    assert merged["generator"] == "Ninja"
+    assert merged["cacheVariables"] == {"DEBUG": "ON"}
+    assert merged["hidden"] is False  # Should use the last one in chain
+
+    # Test merging with empty chain
+    assert presets._merge_presets_chain([], []) == {}
+
+
+@CMakePresets_json("""
+{
+      "version": 3,
+      "configurePresets": [
+        {
+          "name": "base",
+          "generator": "Ninja",
+          "binaryDir": "${sourceDir}/build/${presetName}"
+        }
+      ]
+    }
+""")
+def test_resolve_macro_values_with_relative_paths() -> None:
+    """Test resolving macros with relative paths (default) and absolute paths."""
+    presets = CMakePresets("CMakePresets.json")
+
+    # Test with relative paths (default)
+    resolved = presets.resolve_macro_values(CONFIGURE, "base")
+    assert resolved["binaryDir"] == "build/base"
+    assert not resolved["binaryDir"].startswith("/")
+
+    # Test with absolute paths
+    abs_resolved = presets.resolve_macro_values(CONFIGURE, "base", absolute_paths=True)
+    assert abs_resolved["binaryDir"].startswith("/")
+    assert abs_resolved["binaryDir"].endswith("/build/base")

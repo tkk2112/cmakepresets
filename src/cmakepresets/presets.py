@@ -21,20 +21,20 @@ class CMakePresets:
         Args:
             path: Path to CMakePresets.json file/directory
         """
-        filepath = Path(path)
-        logger.debug(f"Initializing CMakePresets with path: {filepath}")
+        self.file_path = Path(path)
+        logger.debug(f"Initializing CMakePresets with path: {self.file_path}")
 
-        if filepath.is_dir():
+        if self.file_path.is_dir():
             logger.debug("Path is a directory, looking for CMakePresets.json")
-            filepath = filepath / "CMakePresets.json"
+            self.file_path = self.file_path / "CMakePresets.json"
 
-        if not filepath.exists():
-            logger.error(f"File not found: {filepath}")
-            raise FileNotFoundError(f"CMakePresets.json not found at {filepath}")
+        if not self.file_path.exists():
+            logger.error(f"File not found: {self.file_path}")
+            raise FileNotFoundError(f"CMakePresets.json not found at {self.file_path}")
 
-        logger.debug(f"Parsing file: {filepath}")
+        logger.debug(f"Parsing file: {self.file_path}")
         self.parser = Parser()
-        self.parser.parse_file(str(filepath))
+        self.parser.parse_file(str(self.file_path))
         logger.debug(f"Successfully parsed {len(self.parser.loaded_files)} preset files")
 
         # Log number of presets found
@@ -323,41 +323,44 @@ class CMakePresets:
             PACKAGE: dependent_presets.get("packagePresets", []),
         }
 
-    def resolve_macro_values(self, preset_type: str, preset_name: str, env: dict[str, str] | None = None) -> dict[str, Any]:
+    def resolve_macro_values(self, preset_type: str, preset_name: str, absolute_paths: bool = False) -> dict[str, Any]:
         """
-        Resolve a preset with all macros expanded with their values.
+        Resolve macro values in a preset.
 
         Args:
             preset_type: Type of preset (configure, build, test, etc.)
-            preset_name: Name of the preset
-            env: Optional environment variable dict to use for $env macros
+            preset_name: Name of the preset to resolve
+            absolute_paths: If False (default), paths are relative to CMakePresets.json directory.
+                            If True, absolute paths are used.
 
         Returns:
-            Dict with all macro references replaced with their values
+            A new preset with all macros resolved
         """
-        # First flatten the preset to get all properties
-        preset = self.flatten_preset(preset_type, preset_name)
+        flattened = self.flatten_preset(preset_type, preset_name)
 
-        if not preset:
-            logger.warning(f"Could not find preset '{preset_name}' of type '{preset_type}' to resolve")
-            return {}
+        if absolute_paths:
+            # Use absolute paths (original behavior)
+            return resolve_macros_in_preset(
+                flattened,
+                preset_type,
+            )
+        else:
+            # Use paths relative to CMakePresets.json
+            resolved = resolve_macros_in_preset(
+                flattened,
+                preset_type,
+                str(self.file_path.parent),
+            )
 
-        # Get source directory and file paths information
-        source_dir = getattr(self.parser, "source_dir", "")
-        if not source_dir:
-            source_dir = os.getcwd()
+            # For relative paths, strip the source directory prefix from paths
+            # that start with the source directory
+            if "binaryDir" in resolved and isinstance(resolved["binaryDir"], str):
+                src_dir = os.path.abspath(os.path.dirname(self.file_path))
+                if resolved["binaryDir"].startswith(src_dir):
+                    # +1 to remove the leading slash
+                    resolved["binaryDir"] = resolved["binaryDir"][len(src_dir) + 1 :]
 
-        # Get mapping of preset names to containing files
-        file_paths = self._get_preset_file_paths()
-
-        # Use the macro resolver to resolve all macros
-        return resolve_macros_in_preset(
-            preset=preset,
-            preset_type=preset_type,
-            source_dir=source_dir,
-            file_paths=file_paths,
-            env=env,
-        )
+            return resolved
 
     def _get_preset_file_paths(self) -> dict[str, str]:
         """Get mapping of preset names to their containing file paths."""

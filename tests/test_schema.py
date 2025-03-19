@@ -7,7 +7,7 @@ import pytest
 from cmakepresets import log, logger
 from cmakepresets.constants import TEST
 from cmakepresets.exceptions import VersionError
-from cmakepresets.schema import schema_has_version, check_cmake_version_for_schema, get_schema, validate_json_against_schema
+from cmakepresets.schema import check_cmake_version_for_schema, get_schema, schema_has_version, validate_json_against_schema
 
 
 def test_get_schema() -> None:
@@ -40,10 +40,38 @@ def test_get_schema() -> None:
     assert in_schema(version, "workflowPresets", schema)
 
 
-@pytest.mark.parametrize("version,expected", [(2, True), (10, True), (100, False)])
-def test_schema_versions(version, expected):
+@pytest.mark.parametrize("version,expected", [(2, True), (10, True), (100, False)])  # type: ignore
+def test_schema_versions(version: int, expected: bool) -> None:
     schema = get_schema(version if expected else 10)
     assert schema_has_version(schema, version) is expected
+
+
+@pytest.mark.parametrize(
+    "version,expected_fields",
+    [
+        (2, ["configurePresets", "buildPresets"]),
+        (4, ["configurePresets", "buildPresets", "testPresets", "!packagePresets", "!workflowPresets"]),
+        (6, ["configurePresets", "buildPresets", "testPresets", "packagePresets", "workflowPresets"]),
+        (10, ["configurePresets", "buildPresets", "testPresets", "packagePresets", "workflowPresets"]),
+    ],
+)  # type: ignore
+def test_schema_version_fields(version: int, expected_fields: list[str]) -> None:
+    """Test that schemas for different versions contain expected fields."""
+    schema = get_schema(version)
+
+    def field_in_schema(field: str) -> bool:
+        for variant in schema.get("oneOf", []):
+            if "properties" in variant and variant["properties"].get("version", {}).get("const") == version:
+                if field in variant.get("properties", {}):
+                    return True
+        return False
+
+    for field in expected_fields:
+        if field.startswith("!"):
+            actual_field = field[1:]
+            assert not field_in_schema(actual_field), f"Field {actual_field} should NOT be in schema version {version}"
+        else:
+            assert field_in_schema(field), f"Field {field} should be in schema version {version}"
 
 
 def test_schema_getter() -> None:

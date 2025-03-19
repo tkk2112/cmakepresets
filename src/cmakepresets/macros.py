@@ -12,14 +12,20 @@ logger = mainLogger.getChild(__name__)
 class MacroResolver:
     """Class for resolving macros in CMake preset values."""
 
-    def __init__(self, source_dir: str = ""):
+    def __init__(self, source_dir: str = "", cmake_presets_file: str = ""):
         """
         Initialize the macro resolver.
 
         Args:
             source_dir: Path to the source directory
+            cmake_presets_file: Path to the CMakePresets.json file
         """
-        self.source_dir = source_dir or os.getcwd()
+        if cmake_presets_file:
+            # If a CMakePresets file is provided, use its directory as source
+            self.source_dir = os.path.abspath(os.path.dirname(cmake_presets_file))
+        else:
+            # Otherwise use provided source_dir or current directory
+            self.source_dir = os.path.abspath(source_dir or os.getcwd())
 
     def resolve_in_preset(
         self,
@@ -154,17 +160,18 @@ class MacroResolver:
         return result
 
 
-def create_resolver(source_dir: str = "") -> MacroResolver:
+def create_resolver(source_dir: str = "", cmake_presets_file: str = "") -> MacroResolver:
     """
     Create a new MacroResolver instance.
 
     Args:
         source_dir: Source directory path
+        cmake_presets_file: Path to the CMakePresets.json file
 
     Returns:
         A new MacroResolver instance
     """
-    return MacroResolver(source_dir)
+    return MacroResolver(source_dir, cmake_presets_file)
 
 
 def resolve_macros_in_preset(
@@ -173,6 +180,7 @@ def resolve_macros_in_preset(
     source_dir: str = "",
     file_paths: dict[str, str] | None = None,
     env: dict[str, str] | None = None,
+    cmake_presets_file: str = "",
 ) -> dict[str, Any]:
     """
     Convenience function to resolve macros in a preset.
@@ -183,11 +191,12 @@ def resolve_macros_in_preset(
         source_dir: Source directory path
         file_paths: Dictionary mapping preset names to file paths
         env: Additional environment variables
+        cmake_presets_file: Path to the CMakePresets.json file
 
     Returns:
         A new preset with all macros resolved
     """
-    resolver = create_resolver(source_dir)
+    resolver = create_resolver(source_dir, cmake_presets_file)
     return resolver.resolve_in_preset(preset, preset_type, file_paths, env)
 
 

@@ -9,8 +9,8 @@ from cmakepresets.parser import Parser
 from .decorators import CMakePresets_json
 
 
-@pytest.fixture
-def fs_patcher():
+@pytest.fixture  # type: ignore
+def fs_patcher() -> pytest.FixtureRequest:
     with Patcher() as patcher:
         yield patcher
 
@@ -197,7 +197,7 @@ def test_parse_file_with_absolute_include_path() -> None:
     assert absolute_include_content["configurePresets"][0]["name"] == "absolute-preset"
 
 
-def test_parser_read_file_errors(fs_patcher) -> None:
+def test_parser_read_file_errors(fs_patcher: pytest.FixtureRequest) -> None:
     """Test error handling when reading files"""
     # Test non-existent file
     parser = Parser()
@@ -211,7 +211,7 @@ def test_parser_read_file_errors(fs_patcher) -> None:
         parser.parse_file("test_no_permission.json")
 
 
-def test_parser_invalid_json(fs_patcher) -> None:
+def test_parser_invalid_json(fs_patcher: pytest.FixtureRequest) -> None:
     """Test handling of invalid JSON"""
     # Test non-existent file
     parser = Parser()

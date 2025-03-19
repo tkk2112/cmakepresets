@@ -1,5 +1,5 @@
 from cmakepresets import __name__, console, logger
-from cmakepresets.log import DEBUG, Logger
+from cmakepresets.log import DEBUG, ERROR, Logger
 
 
 def test_logger_creation() -> None:
@@ -21,3 +21,17 @@ def test_console_exists() -> None:
 
 def test_Console_is_Logger_console() -> None:
     assert logger.console is console
+
+
+def test_logger_level_setting() -> None:
+    """Test that logger level can be set correctly."""
+    # Test setting to different levels
+    test_logger = Logger(level=DEBUG)
+    assert test_logger.level == DEBUG
+
+    test_logger.setLevel(ERROR)
+    assert test_logger.level == ERROR
+
+    # Test that child loggers inherit parent level
+    child_logger = test_logger.getChild("child")
+    assert child_logger.getEffectiveLevel() == ERROR

@@ -31,6 +31,22 @@ def test_basic_macro_resolution() -> None:
     assert result == "/path/to/source/build/test-preset"
 
 
+def test_file_based_macro_resolution() -> None:
+    """Test resolving macros relative to a CMakePresets.json file."""
+    # Create resolver with a path to CMakePresets.json
+    resolver = MacroResolver(cmake_presets_file="/path/to/project/CMakePresets.json")
+    context = resolver._create_basic_context({"name": "test-preset"})
+
+    # Source directory should be the directory containing CMakePresets.json
+    assert resolver.resolve_string("${sourceDir}", context) == "/path/to/project"
+    assert resolver.resolve_string("${sourceParentDir}", context) == "/path/to"
+    assert resolver.resolve_string("${sourceDirName}", context) == "project"
+
+    # Test with relative paths
+    result = resolver.resolve_string("${sourceDir}/build/${presetName}", context)
+    assert result == "/path/to/project/build/test-preset"
+
+
 def test_environment_macros() -> None:
     """Test resolving environment-based macros."""
     with patch.dict(os.environ, {"PATH": "/usr/bin", "HOME": "/home/user"}):
@@ -113,3 +129,29 @@ def test_convenience_functions() -> None:
     preset = {"name": "quick-test", "binaryDir": "${sourceDir}/build"}
     resolved = resolve_macros_in_preset(preset, CONFIGURE, "/custom/source")
     assert resolved["binaryDir"] == "/custom/source/build"
+
+    # Test preset resolution with CMakePresets.json file
+    preset = {"name": "file-test", "binaryDir": "${sourceDir}/build/${presetName}"}
+    resolved = resolve_macros_in_preset(
+        preset,
+        CONFIGURE,
+        cmake_presets_file="/some/path/CMakePresets.json",
+    )
+    assert resolved["binaryDir"] == "/some/path/build/file-test"
+
+
+def test_resolve_macros_with_empty_values() -> None:
+    """Test macro resolution with empty or None values."""
+    resolver = MacroResolver()
+
+    # Test with empty string
+    assert resolver.resolve_string("", {}) == ""
+
+    # Test with macros that don't exist in context
+    result = resolver.resolve_string("${nonexistent}", {})
+    assert result == "${nonexistent}"  # Should preserve unresolved macros
+
+    # Test with None values in context
+    context = {"test": None}
+    result = resolver.resolve_string("${test}", context)
+    assert result == "None"  # None should be converted to string

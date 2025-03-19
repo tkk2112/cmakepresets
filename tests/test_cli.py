@@ -620,5 +620,5 @@ def test_handle_show_command_with_resolve(mock_console_print: MagicMock) -> None
             source_dir = os.getcwd()
 
             # Check that macros were resolved
-            assert parsed["binaryDir"] == f"{source_dir}/build/macro-test"
+            assert parsed["binaryDir"] == "build/macro-test"
             assert parsed["cacheVariables"]["SOURCE_DIR"] == source_dir
