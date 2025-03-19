@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.1](https://github.com/tkk2112/cmakepresets/compare/v0.3.0...v0.3.1) (2025-03-19)
+
+
+### Features
+
+* add --resolve to show command to resolve macros ([04b928d](https://github.com/tkk2112/cmakepresets/commit/04b928d515a1cf153894f92cb8540104778fc642))
+* add pseudo macro resolver ([d7188d7](https://github.com/tkk2112/cmakepresets/commit/d7188d7e0ea892d31398fad362c48c28c75eb262))
+* resolve macros of a preset with resolve_macro_values ([3fcb0fa](https://github.com/tkk2112/cmakepresets/commit/3fcb0faa56618964f2347fa42c34d5eb1c0b81c7))
+
 ## [0.3.0](https://github.com/tkk2112/cmakepresets/compare/v0.2.6...v0.3.0) (2025-03-19)
 
 
