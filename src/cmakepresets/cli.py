@@ -49,6 +49,7 @@ def create_parser() -> argparse.ArgumentParser:
     show_parser.add_argument("--type", "-t", choices=CLI_PRESET_TYPES, help="Type of preset (optional if name is unique)")
     show_parser.add_argument("--json", action="store_true", help="Output in JSON format")
     show_parser.add_argument("--flatten", action="store_true", help="Show flattened preset with all inherited values resolved")
+    show_parser.add_argument("--resolve", action="store_true", help="Tries to resolve all macros to their actual values")
 
     # Related command
     related_parser = subparsers.add_parser("related", help="Show presets related to a specific configure preset")
@@ -280,6 +281,10 @@ def handle_show_command(presets: CMakePresets, args: argparse.Namespace) -> int:
     if args.flatten:
         found_preset = presets.flatten_preset(found_type, preset_name)
 
+    # If resolve option is specified, get the preset with resolved macros
+    if args.resolve:
+        found_preset = presets.resolve_macro_values(found_type, preset_name)
+
     # Output as JSON if requested
     if args.json:
         console.print(json.dumps(found_preset, indent=2))
@@ -289,11 +294,11 @@ def handle_show_command(presets: CMakePresets, args: argparse.Namespace) -> int:
 
     # Display property sources and inheritance info
     property_sources: dict[str, str] = {}
-    if not args.flatten:
+    if not args.flatten and not args.resolve:
         _show_inheritance_info(presets, found_preset, found_type, preset_name, property_sources)
 
     # Display the preset details
-    _show_preset_details(presets, found_preset, found_type, preset_name, property_sources, args.flatten)
+    _show_preset_details(presets, found_preset, found_type, preset_name, property_sources, args.flatten or args.resolve)
 
     return 0
 

@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 from collections.abc import Generator
 from unittest.mock import MagicMock, patch
 
@@ -209,6 +210,7 @@ def test_handle_show_command(mock_console_print: MagicMock) -> None:
         type="configure",
         json=False,
         flatten=False,
+        resolve=False,
         verbose=0,
     )
 
@@ -254,6 +256,7 @@ def test_handle_show_command_not_found(mock_console_print: MagicMock) -> None:
         type=None,
         json=False,
         flatten=False,
+        resolve=False,
         verbose=0,
     )
 
@@ -502,22 +505,21 @@ def test_integration_show_command(mock_console_print: MagicMock) -> None:
         command="show",
         preset_name="derived",
         type="configure",
-        json=False,
+        json=True,
         flatten=True,
+        resolve=False,
         verbose=0,
     )
 
-    with patch("sys.argv", ["cmakepresets", "--file", "CMakePresets.json", "show", "derived"]):
+    with patch("sys.argv", ["cmakepresets", "--file", "CMakePresets.json", "show", "derived", "--json"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
-            # Instead use JSON output to verify content properly
-            args.json = True
             result = cli.main()
 
             assert result == 0
             mock_console_print.assert_called()
 
             # With JSON output, we can verify the exact content
-            json_output = mock_console_print.call_args_list[0][0][0]
+            json_output = mock_console_print.call_args[0][0]
             parsed = json.loads(json_output)
             assert parsed["name"] == "derived"
             assert "cacheVariables" in parsed
@@ -567,3 +569,55 @@ def test_integration_related_command(mock_console_print: MagicMock) -> None:
             output_text = " ".join(str(call) for call in mock_console_print.call_args_list)
             assert "default-build" in output_text
             assert "default-test" in output_text
+
+
+@CMakePresets_json("""
+{
+    "version": 6,
+    "cmakeMinimumRequired": {"major": 3, "minor": 29, "patch": 0},
+    "configurePresets": [
+        {
+            "name": "macro-test",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "SOURCE_DIR": "${sourceDir}"
+            }
+        }
+    ]
+}
+""")
+def test_handle_show_command_with_resolve(mock_console_print: MagicMock) -> None:
+    """Test the show command with macro resolution."""
+    # Test with resolve option
+    args = argparse.Namespace(
+        file="CMakePresets.json",
+        directory=None,
+        command="show",
+        preset_name="macro-test",
+        type=None,
+        json=True,
+        flatten=False,
+        resolve=True,
+        verbose=0,
+    )
+
+    with patch("sys.argv", ["cmakepresets", "show", "macro-test", "--resolve", "--json"]):
+        with patch("argparse.ArgumentParser.parse_args", return_value=args):
+            result = cli.main()
+
+            # Should succeed
+            assert result == 0
+            mock_console_print.assert_called_once()
+
+            # Parse the output JSON to check resolved values
+            json_output = mock_console_print.call_args[0][0]
+            parsed = json.loads(json_output)
+
+            # The source directory in tests will be the current directory
+            source_dir = os.getcwd()
+
+            # Check that macros were resolved
+            assert parsed["binaryDir"] == f"{source_dir}/build/macro-test"
+            assert parsed["cacheVariables"]["SOURCE_DIR"] == source_dir
