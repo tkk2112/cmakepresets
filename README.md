@@ -1,4 +1,7 @@
-# CMakePresets
+[//]: # (x-release-please-start-version)
+# CMakePresets 0.2.6
+[//]: # (x-release-please-end)
+
 
 A Python library and CLI tool for working with CMakePresets.json configuration files in CMake projects.
 
@@ -17,11 +20,9 @@ CMakePresets is a utility that helps you inspect and work with CMake preset conf
 
 ## Installation
 
-[//]: # (x-release-please-start-version)
 ```bash
-pip install git+https://github.com/tkk2112/cmakepresets.git@v0.2.6
+pip install cmakepresets
 ```
-[//]: # (x-release-please-end)
 
 ## Python API
 

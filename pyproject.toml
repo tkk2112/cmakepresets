@@ -25,7 +25,7 @@ Issues = "https://github.com/tkk2112/cmakepresets/issues"
 Repository = "https://github.com/tkk2112/cmakepresets.git"
 
 [project.scripts]
-cmakepreset = "cmakepresets:cli.main"
+cmakepresets = "cmakepresets:cli.main"
 
 [tool.hatch.version]
 path = "src/cmakepresets/__init__.py"
