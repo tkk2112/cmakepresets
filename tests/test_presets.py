@@ -1,3 +1,6 @@
+import os
+import platform
+
 import pytest
 from pyfakefs.fake_filesystem_unittest import Patcher
 
@@ -468,3 +471,115 @@ def test_find_related_presets() -> None:
     # Test nonexistent preset
     nonexistent_related = presets.find_related_presets("nonexistent")
     assert nonexistent_related is None
+
+
+@CMakePresets_json("""
+{
+    "version": 6,
+    "cmakeMinimumRequired": {"major": 3, "minor": 29, "patch": 0},
+    "configurePresets": [
+        {
+            "name": "with-macros",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "PROJECT_SOURCE_DIR": "${sourceDir}",
+                "SOURCE_PARENT": "${sourceParentDir}",
+                "SOURCE_NAME": "${sourceDirName}",
+                "PRESET_NAME": "${presetName}",
+                "PATH_SEP": "${pathListSep}",
+                "DOLLAR_SIGN": "${dollar}",
+                "SYSTEM_NAME": "${hostSystemName}",
+                "ENV_PATH": "$env{PATH}",
+                "PENV_HOME": "$penv{HOME}"
+            }
+        }
+    ]
+}
+""")
+def test_resolve_macro_values() -> None:
+    """Test resolving macros in a preset."""
+    presets = CMakePresets("CMakePresets.json")
+
+    # Get the preset with macros resolved
+    resolved = presets.resolve_macro_values("configure", "with-macros")
+
+    # Verify the basic preset properties were preserved
+    assert resolved["name"] == "with-macros"
+    assert resolved["generator"] == "Ninja"
+
+    # Verify the macros were resolved
+    source_dir = os.getcwd()  # In the test environment
+    assert resolved["binaryDir"] == f"{source_dir}/build/with-macros"
+
+    # Check cache variables
+    cache_vars = resolved["cacheVariables"]
+    assert cache_vars["PROJECT_SOURCE_DIR"] == source_dir
+    assert cache_vars["SOURCE_PARENT"] == os.path.dirname(source_dir)
+    assert cache_vars["SOURCE_NAME"] == os.path.basename(source_dir)
+    assert cache_vars["PRESET_NAME"] == "with-macros"
+    assert cache_vars["PATH_SEP"] == os.pathsep
+    assert cache_vars["DOLLAR_SIGN"] == "$"
+    assert cache_vars["SYSTEM_NAME"] == platform.system()
+
+    # Environment variables will depend on the test environment
+    assert "ENV_PATH" in cache_vars
+    assert "PENV_HOME" in cache_vars
+
+
+@CMakePresets_json("""
+{
+    "version": 6,
+    "cmakeMinimumRequired": {"major": 3, "minor": 29, "patch": 0},
+    "configurePresets": [
+        {
+            "name": "with-nested-macros",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "environment": {
+                "CUSTOM_VAR": "custom-value",
+                "NESTED_VAR": "${sourceDir}/$env{CUSTOM_VAR}"
+            }
+        }
+    ]
+}
+""")
+def test_resolve_nested_macro_values() -> None:
+    """Test resolving nested macros in a preset."""
+    presets = CMakePresets("CMakePresets.json")
+
+    # Get the preset with macros resolved
+    resolved = presets.resolve_macro_values("configure", "with-nested-macros")
+
+    # Verify nested macros in environment are resolved
+    source_dir = os.getcwd()  # In the test environment
+    assert resolved["environment"]["NESTED_VAR"] == f"{source_dir}/custom-value"
+
+
+@CMakePresets_json("""
+{
+    "version": 6,
+    "cmakeMinimumRequired": {"major": 3, "minor": 29, "patch": 0},
+    "configurePresets": [
+        {
+            "name": "with-vendor-macros",
+            "generator": "Ninja",
+            "binaryDir": "$vendor{xide.buildDir}",
+            "cacheVariables": {
+                "VENDOR_VAR": "$vendor{xide.customValue}"
+            }
+        }
+    ]
+}
+""")
+def test_resolve_vendor_macro_values() -> None:
+    """Test handling vendor macros in a preset."""
+    presets = CMakePresets("CMakePresets.json")
+
+    # Get the preset with macros resolved
+    resolved = presets.resolve_macro_values("configure", "with-vendor-macros")
+
+    # Verify vendor macros are left as-is
+    assert resolved["binaryDir"] == "$vendor{xide.buildDir}"
+    assert resolved["cacheVariables"]["VENDOR_VAR"] == "$vendor{xide.customValue}"

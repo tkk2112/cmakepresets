@@ -1,8 +1,10 @@
+import os
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, Final, cast
 
 from . import logger as mainLogger
+from .macros import resolve_macros_in_preset
 from .parser import Parser
 
 logger: Final = mainLogger.getChild(__name__)
@@ -337,3 +339,52 @@ class CMakePresets:
             "test": dependent_presets.get("testPresets", []),
             "package": dependent_presets.get("packagePresets", []),
         }
+
+    def resolve_macro_values(self, preset_type: str, preset_name: str, env: dict[str, str] | None = None) -> dict[str, Any]:
+        """
+        Resolve a preset with all macros expanded with their values.
+
+        Args:
+            preset_type: Type of preset (configure, build, test, etc.)
+            preset_name: Name of the preset
+            env: Optional environment variable dict to use for $env macros
+
+        Returns:
+            Dict with all macro references replaced with their values
+        """
+        # First flatten the preset to get all properties
+        preset = self.flatten_preset(preset_type, preset_name)
+
+        if not preset:
+            logger.warning(f"Could not find preset '{preset_name}' of type '{preset_type}' to resolve")
+            return {}
+
+        # Get source directory and file paths information
+        source_dir = getattr(self.parser, "source_dir", "")
+        if not source_dir:
+            source_dir = os.getcwd()
+
+        # Get mapping of preset names to containing files
+        file_paths = self._get_preset_file_paths()
+
+        # Use the macro resolver to resolve all macros
+        return resolve_macros_in_preset(
+            preset=preset,
+            preset_type=preset_type,
+            source_dir=source_dir,
+            file_paths=file_paths,
+            env=env,
+        )
+
+    def _get_preset_file_paths(self) -> dict[str, str]:
+        """Get mapping of preset names to their containing file paths."""
+        file_paths: dict[str, str] = {}
+        for filepath, file_data in self.parser.loaded_files.items():
+            for preset_key in PRESET_TYPES.values():
+                if preset_key not in file_data:
+                    continue
+                for preset in file_data[preset_key]:
+                    name = preset.get("name")
+                    if name:
+                        file_paths[name] = filepath
+        return file_paths
