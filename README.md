@@ -150,20 +150,22 @@ cmakepresets --file CMakePresets.json related my-configure-preset --plain
 
 >>> # Get flattened preset with all inherited properties resolved
 >>> flattened = presets.flatten_preset(CONFIGURE, "my-config")
->>>
+
 >>> # Print the original preset
 >>> print(my_config)
 {'name': 'my-config', 'inherits': 'base', 'cacheVariables': {'CMAKE_BUILD_TYPE': 'Debug'}}
->>>
+
 >>> # Compared to flattened
 >>> print(flattened)
 {'name': 'my-config', 'generator': 'Ninja', 'binaryDir': '${sourceDir}/build/${presetName}', 'cacheVariables': {'CMAKE_BUILD_TYPE': 'Debug'}}
 
+
 >>>
 >>> # Get flattened preset with "pseudo" resolved macros
->>> resolved = presets.resolve_macro_values(CONFIGURE, "my-config")
+>>> resolved = presets.resolve_macro_values(CONFIGURE, "my-config", relative_paths=True)
 >>> print(resolved)
 {'name': 'my-config', 'generator': 'Ninja', 'binaryDir': 'build/my-config', 'cacheVariables': {'CMAKE_BUILD_TYPE': 'Debug'}}
+
 
 >>> # Clean up test environment (important to avoid resource leaks)
 >>> patcher.__exit__(None, None, None)

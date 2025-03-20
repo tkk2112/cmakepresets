@@ -512,7 +512,7 @@ def test_resolve_macro_values() -> None:
 
     # Verify the macros were resolved
     source_dir = os.getcwd()  # In the test environment
-    assert resolved["binaryDir"] == "build/with-macros"
+    assert resolved["binaryDir"] == "/build/with-macros"
 
     # Check cache variables
     cache_vars = resolved["cacheVariables"]
@@ -632,10 +632,10 @@ def test_resolve_macro_values_with_relative_paths() -> None:
 
     # Test with relative paths (default)
     resolved = presets.resolve_macro_values(CONFIGURE, "base")
-    assert resolved["binaryDir"] == "build/base"
-    assert not resolved["binaryDir"].startswith("/")
+    assert resolved["binaryDir"] == "/build/base"
+    assert resolved["binaryDir"].startswith("/")
 
     # Test with absolute paths
-    abs_resolved = presets.resolve_macro_values(CONFIGURE, "base", absolute_paths=True)
-    assert abs_resolved["binaryDir"].startswith("/")
-    assert abs_resolved["binaryDir"].endswith("/build/base")
+    abs_resolved = presets.resolve_macro_values(CONFIGURE, "base", relative_paths=True)
+    assert not abs_resolved["binaryDir"].startswith("/")
+    assert abs_resolved["binaryDir"].endswith("build/base")

@@ -322,7 +322,7 @@ class CMakePresets:
             PACKAGE: dependent_presets.get("packagePresets", []),
         }
 
-    def resolve_macro_values(self, preset_type: str, preset_name: str, absolute_paths: bool = False) -> dict[str, Any]:
+    def resolve_macro_values(self, preset_type: str, preset_name: str, relative_paths: bool = False) -> dict[str, Any]:
         """
         Resolve macro values in a preset.
 
@@ -346,7 +346,7 @@ class CMakePresets:
             preset_type,
             "",  # Empty source_dir
             str(self.file_path),
-            not absolute_paths,
+            relative_paths,
             preset_file_paths,
         )
 
