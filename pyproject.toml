@@ -51,32 +51,44 @@ profile = "black"
 line_length = 158
 
 [tool.pytest.ini_options]
-minversion = "6.0"
 testpaths = ["tests"]
-addopts = "--strict-markers --cov=cmakepresets --cov-branch --cov-report term --cov-report html"
+minversion = "8.0"
+addopts = [
+    "--import-mode=importlib",
+    "--strict-markers",
+    "--random-order",
+    "--cov=src/cmakepresets",
+    "--no-cov-on-fail",
+    "--cov-branch",
+    "--cov-report=term",
+    "--cov-report=html"
+]
 
 [tool.mypy]
 python_version = "3.11"
 check_untyped_defs = true
 disallow_incomplete_defs = true
 ignore_missing_imports = true
-
-[tool.aliases]
-check = "uv run pre-commit run --all-files"
-test = "uv run pytest"
+implicit_optional = true
 
 [tool.uv.sources]
 pyproject-aliases = { git = "https://github.com/tkk2112/pyproject_aliases.git" }
 
 [dependency-groups]
 dev = [
-    "pre-commit>=4.1.0",
-    "pytest>=7.0.0",
-    "pyfakefs>=5.7.4",
-    "pytest-cov>=6.0.0",
     "hatch>=1.14.0",
     "mypy>=1.15.0",
+    "pre-commit>=4.1.0",
+    "pyfakefs>=5.7.4",
+    "pyproject-aliases",
+    "pytest-cov>=6.0.0",
+    "pytest>=8.3.5",
     "types-jsonschema>=4.23.0.20241208",
     "types-requests>=2.32.0.20250306",
-    "pyproject-aliases",
+    "pytest-random-order>=1.1.1",
+    "no-implicit-optional>=1.4",
 ]
+
+[tool.aliases]
+check = "uv run pre-commit run --all-files"
+test = "uv run pytest"
