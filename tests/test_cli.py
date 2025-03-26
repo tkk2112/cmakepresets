@@ -358,15 +358,14 @@ def test_handle_related_command_plain_output(mock_console_print: MagicMock) -> N
 
     with patch("sys.argv", [__name__, "related", "default", "--plain"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
-            with patch("builtins.print") as mock_print:
-                result = cli.main()
+            result = cli.main()
 
-                assert result == 0
-                mock_print.assert_called_once()
-                # Should print available types
-                output = mock_print.call_args[0][0]
-                assert "build" in output
-                assert "test" in output
+            assert result == 0
+            mock_console_print.assert_called_once()
+            # Should print available types
+            output = mock_console_print.call_args[0][0]
+            assert BUILD in output
+            assert TEST in output
 
 
 @CMakePresets_json(
