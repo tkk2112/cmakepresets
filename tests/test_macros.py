@@ -1,5 +1,3 @@
-"""Tests for the macro resolution functionality."""
-
 import os
 import platform
 from unittest.mock import patch
