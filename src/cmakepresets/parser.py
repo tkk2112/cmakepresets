@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any, Final
 
 from . import logger as mainLogger
+from . import utils
 from .exceptions import FileParseError, FileReadError, VersionError
 from .schema import check_cmake_version_for_schema, get_schema, validate_json_against_schema
 
@@ -76,8 +77,7 @@ class Parser:
         """
         logger.debug(f"Loading file: {filepath}")
         try:
-            with open(str(filepath), encoding="utf-8") as f:
-                content = f.read()
+            content = utils.read_file_text(filepath)
         except OSError as e:
             logger.error(f"Failed to read file: {filepath}, error: {e}")
             raise FileReadError(f"Unable to read file {filepath}: {e}")
