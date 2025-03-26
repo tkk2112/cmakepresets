@@ -660,14 +660,14 @@ def _handle_related_plain_output(args: argparse.Namespace, related_presets: dict
         # Get available types and print them
         available_types = _get_available_preset_types(related_presets, args.show_hidden)
         if available_types:
-            print(" ".join(available_types))
+            console.print(" ".join(available_types))
             return 0
         return 1
     else:
         # Get preset names for the specific type
         preset_names = _get_preset_names_for_type(related_presets, args.type, args.show_hidden)
         if preset_names:
-            print(" ".join(preset_names))
+            console.print(" ".join(preset_names))
             return 0
         return 1
 
