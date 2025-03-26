@@ -576,3 +576,31 @@ def test_resolve_vendor_macro_values() -> None:
     # Verify vendor macros are left as-is
     assert resolved["binaryDir"] == "$vendor{xide.buildDir}"
     assert resolved["cacheVariables"]["VENDOR_VAR"] == "$vendor{xide.customValue}"
+
+
+@CMakePresets_json(
+    {
+        "version": 4,
+        "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+        PRESET_MAP[CONFIGURE]: [{"name": "default", "generator": "Ninja"}],
+    },
+)
+def test_merge_presets_chain() -> None:
+    """Test the _merge_presets_chain helper method."""
+    presets = CMakePresets("CMakePresets.json")
+
+    # Create a simple chain
+    chain = [
+        {"name": "base", "generator": "Ninja", "hidden": True},
+        {"name": "derived", "cacheVariables": {"DEBUG": "ON"}, "hidden": False},
+    ]
+
+    # Test merging with non-inheritable properties
+    merged = presets._merge_presets_chain(chain, non_inheritable_properties=["hidden"])
+    assert merged["name"] == "derived"
+    assert merged["generator"] == "Ninja"
+    assert merged["cacheVariables"] == {"DEBUG": "ON"}
+    assert merged["hidden"] is False  # Should use the last one in chain
+
+    # Test merging with empty chain
+    assert presets._merge_presets_chain([], []) == {}
