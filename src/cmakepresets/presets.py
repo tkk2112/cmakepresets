@@ -1,4 +1,3 @@
-import os
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, Final, cast
@@ -7,6 +6,7 @@ from . import logger as mainLogger
 from .constants import BUILD, CONFIGURE, PACKAGE, PRESET_MAP, TEST, WORKFLOW
 from .macros import resolve_macros_in_preset
 from .parser import Parser
+from .paths import CMakeRoot
 
 logger: Final = mainLogger.getChild(__name__)
 
@@ -14,27 +14,29 @@ logger: Final = mainLogger.getChild(__name__)
 class CMakePresets:
     """Class for working with CMake presets data."""
 
-    def __init__(self, path: str | Path) -> None:
+    def __init__(self, path_input: str | Path | CMakeRoot):
         """
-        Initialize with path to CMakePresets.json file/directory.
+        Initialize with path to CMakePresets.json or CMakeRoot instance.
 
         Args:
-            path: Path to CMakePresets.json file/directory
+            path_input: Either a string/Path to a CMakePresets.json file/directory,
+                       or a CMakeRoot instance containing source directory and presets file paths
+
+        Raises:
+            FileNotFoundError: If the specified file or directory doesn't exist
+            FileReadError: If a file cannot be read
+            FileParseError: If a file cannot be parsed as JSON
+            VersionError: If the version is not supported (< 2)
         """
-        filepath = Path(path)
-        logger.debug(f"Initializing CMakePresets with path: {filepath}")
+        # Convert path_input to CMakeRoot if it's not already
+        if not isinstance(path_input, CMakeRoot):
+            self.root = CMakeRoot(path_input)
+        else:
+            self.root = path_input
 
-        if filepath.is_dir():
-            logger.debug("Path is a directory, looking for CMakePresets.json")
-            filepath = filepath / "CMakePresets.json"
-
-        if not filepath.exists():
-            logger.error(f"File not found: {filepath}")
-            raise FileNotFoundError(f"CMakePresets.json not found at {filepath}")
-
-        logger.debug(f"Parsing file: {filepath}")
+        logger.debug(f"Parsing file: {self.root.presets_file}")
         self.parser = Parser()
-        self.parser.parse_file(str(filepath))
+        self.parser.parse_file(str(self.root.presets_file))
         logger.debug(f"Successfully parsed {len(self.parser.loaded_files)} preset files")
 
         # Log number of presets found
@@ -210,36 +212,26 @@ class CMakePresets:
         chain = self.get_preset_inheritance_chain(preset_type, preset_name)
         chain.append(preset)  # Add the preset itself
 
-        # Merge all presets in the chain
-        flattened: dict[str, Any] = {}
+        return self._merge_presets_chain(chain, non_inheritable_properties=["inherits", "hidden"])
 
-        # Properties that should never be inherited from parent presets
-        non_inheritable_properties = ["inherits", "hidden"]
-
+    def _merge_presets_chain(self, chain: list[dict[str, Any]], non_inheritable_properties: list[str]) -> dict[str, Any]:
+        merged: dict[str, Any] = {}
         for p in chain:
-            p_copy = {}
+            temp = {}
             for key, value in p.items():
-                # Skip properties that should not be inherited from parents
                 if key in non_inheritable_properties and p != chain[-1]:
                     continue
-
-                # Skip inherits property entirely - it's not useful in a flattened preset
                 if key == "inherits":
                     continue
-
                 if isinstance(value, dict):
-                    if key in flattened and isinstance(flattened[key], dict):
-                        # Merge dictionaries for nested values
-                        merged = flattened[key].copy()
-                        merged.update(value)
-                        p_copy[key] = merged
+                    if key in merged and isinstance(merged[key], dict):
+                        temp[key] = {**merged[key], **value}
                     else:
-                        p_copy[key] = value.copy()
+                        temp[key] = value.copy()
                 else:
-                    p_copy[key] = value
-            flattened.update(p_copy)
-
-        return flattened
+                    temp[key] = value
+            merged.update(temp)
+        return merged
 
     def get_dependent_presets(self, preset_type: str, preset_name: str) -> dict[str, list[dict[str, Any]]]:
         """
@@ -333,40 +325,27 @@ class CMakePresets:
             PACKAGE: dependent_presets.get(PRESET_MAP[PACKAGE], []),
         }
 
-    def resolve_macro_values(self, preset_type: str, preset_name: str, env: dict[str, str] | None = None) -> dict[str, Any]:
+    def resolve_macro_values(self, preset_type: str, preset_name: str) -> dict[str, Any]:
         """
-        Resolve a preset with all macros expanded with their values.
+        Resolve macro values in a preset.
 
         Args:
             preset_type: Type of preset (configure, build, test, etc.)
-            preset_name: Name of the preset
-            env: Optional environment variable dict to use for $env macros
+            preset_name: Name of the preset to resolve
 
         Returns:
-            Dict with all macro references replaced with their values
+            A new preset with all macros resolved
         """
-        # First flatten the preset to get all properties
-        preset = self.flatten_preset(preset_type, preset_name)
+        flattened = self.flatten_preset(preset_type, preset_name)
 
-        if not preset:
-            logger.warning(f"Could not find preset '{preset_name}' of type '{preset_type}' to resolve")
-            return {}
+        # Get file paths to provide context for macros
+        preset_file_paths = self._get_preset_file_paths()
 
-        # Get source directory and file paths information
-        source_dir = getattr(self.parser, "source_dir", "")
-        if not source_dir:
-            source_dir = os.getcwd()
-
-        # Get mapping of preset names to containing files
-        file_paths = self._get_preset_file_paths()
-
-        # Use the macro resolver to resolve all macros
+        # Use the updated API
         return resolve_macros_in_preset(
-            preset=preset,
-            preset_type=preset_type,
-            source_dir=source_dir,
-            file_paths=file_paths,
-            env=env,
+            flattened,
+            self.root,
+            file_paths=preset_file_paths,
         )
 
     def _get_preset_file_paths(self) -> dict[str, str]:

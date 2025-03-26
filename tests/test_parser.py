@@ -10,6 +10,12 @@ from cmakepresets.parser import Parser
 from .decorators import CMakePresets_json
 
 
+@pytest.fixture  # type: ignore
+def fs_patcher() -> pytest.FixtureRequest:
+    with Patcher() as patcher:
+        yield patcher
+
+
 def test_parser_initialization() -> None:
     """Test that parser initializes correctly."""
     parser = Parser()
@@ -192,29 +198,27 @@ def test_parse_file_with_absolute_include_path() -> None:
     assert absolute_include_content[PRESET_MAP[CONFIGURE]][0]["name"] == "absolute-preset"
 
 
-def test_parser_read_file_errors() -> None:
+def test_parser_read_file_errors(fs_patcher: pytest.FixtureRequest) -> None:
     """Test error handling when reading files"""
-    with Patcher() as patcher:
-        # Test non-existent file
-        parser = Parser()
-        with pytest.raises(FileReadError):
-            parser.parse_file("nonexistent_file.json")
+    # Test non-existent file
+    parser = Parser()
+    with pytest.raises(FileNotFoundError):
+        parser.parse_file("nonexistent_file.json")
 
-        # Test permission error
-        patcher.fs.create_file("test_no_permission.json", contents="{}")
-        os.chmod("test_no_permission.json", 0)
-        with pytest.raises(FileReadError):
-            parser.parse_file("test_no_permission.json")
+    # Test permission error
+    fs_patcher.fs.create_file("CMakePresets.json", contents="{}")
+    os.chmod("CMakePresets.json", 0)
+    with pytest.raises(FileReadError):
+        parser.parse_file("CMakePresets.json")
 
 
-def test_parser_invalid_json() -> None:
+def test_parser_invalid_json(fs_patcher: pytest.FixtureRequest) -> None:
     """Test handling of invalid JSON"""
-    with Patcher() as patcher:
-        # Test non-existent file
-        parser = Parser()
-        patcher.fs.create_file("invalid.json", contents="{invalid json")
-        with pytest.raises(FileParseError):
-            parser.parse_file("invalid.json")
+    # Test non-existent file
+    parser = Parser()
+    fs_patcher.fs.create_file("CMakePresets.json", contents="{invalid json")
+    with pytest.raises(FileParseError):
+        parser.parse_file("CMakePresets.json")
 
 
 @CMakePresets_json(

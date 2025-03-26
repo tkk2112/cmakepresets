@@ -1,7 +1,7 @@
 import argparse
 import json
-import os
 from collections.abc import Generator
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -615,9 +615,6 @@ def test_handle_show_command_with_resolve(mock_console_print: MagicMock) -> None
             json_output = mock_console_print.call_args[0][0]
             parsed = json.loads(json_output)
 
-            # The source directory in tests will be the current directory
-            source_dir = os.getcwd()
-
             # Check that macros were resolved
-            assert parsed["binaryDir"] == f"{source_dir}/build/macro-test"
-            assert parsed["cacheVariables"]["SOURCE_DIR"] == source_dir
+            assert parsed["binaryDir"] == str(Path.cwd() / "build/macro-test")
+            assert parsed["cacheVariables"]["SOURCE_DIR"] == str(Path.cwd())
