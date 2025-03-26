@@ -604,7 +604,7 @@ def test_handle_show_command_with_resolve(mock_console_print: MagicMock) -> None
         verbose=0,
     )
 
-    with patch("sys.argv", ["cmakepresets", "show", "macro-test", "--resolve", "--json"]):
+    with patch("sys.argv", [__name__, "show", "macro-test", "--resolve", "--json"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 
