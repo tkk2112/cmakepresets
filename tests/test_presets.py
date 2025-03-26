@@ -492,33 +492,35 @@ def test_find_related_presets() -> None:
 )
 def test_resolve_macro_values() -> None:
     """Test resolving macros in a preset."""
-    presets = CMakePresets("CMakePresets.json")
+    # Patch os.getcwd and Path.cwd to return a fixed path
+    mock_path = "/home/user/project"
+    with unittest.mock.patch("os.getcwd", return_value=mock_path), unittest.mock.patch("pathlib.Path.cwd", return_value=Path(mock_path)):
+        presets = CMakePresets("CMakePresets.json")
 
-    # Get the preset with macros resolved
-    resolved = presets.resolve_macro_values("configure", "with-macros")
+        # Get the preset with macros resolved
+        resolved = presets.resolve_macro_values(CONFIGURE, "with-macros")
 
-    # Verify the basic preset properties were preserved
-    assert resolved["name"] == "with-macros"
-    assert resolved["generator"] == "Ninja"
+        # Verify the basic preset properties were preserved
+        assert resolved["name"] == "with-macros"
+        assert resolved["generator"] == "Ninja"
 
-    # Verify the macros were resolved
-    source_dir = os.getcwd()  # In the test environment
-    assert resolved["binaryDir"] == f"{source_dir}/build/with-macros"
+        # Verify the macros were resolved
+        source_dir = Path(mock_path)
+        assert resolved["binaryDir"] == f"{mock_path}/build/with-macros"
 
-    # Check cache variables
-    cache_vars = resolved["cacheVariables"]
-    assert cache_vars["PROJECT_SOURCE_DIR"] == source_dir
-    assert cache_vars["SOURCE_PARENT"] == os.path.dirname(source_dir)
-    assert cache_vars["SOURCE_NAME"] == os.path.basename(source_dir)
-    assert cache_vars["PRESET_NAME"] == "with-macros"
-    assert cache_vars["PATH_SEP"] == os.pathsep
-    assert cache_vars["DOLLAR_SIGN"] == "$"
-    assert cache_vars["SYSTEM_NAME"] == platform.system()
+        # Check cache variables
+        cache_vars = resolved["cacheVariables"]
+        assert cache_vars["PROJECT_SOURCE_DIR"] == mock_path
+        assert cache_vars["SOURCE_PARENT"] == f"{source_dir.parent}"
+        assert cache_vars["SOURCE_NAME"] == source_dir.name
+        assert cache_vars["PRESET_NAME"] == "with-macros"
+        assert cache_vars["PATH_SEP"] == os.pathsep
+        assert cache_vars["DOLLAR_SIGN"] == "$"
+        assert cache_vars["SYSTEM_NAME"] == platform.system()
 
-    # Environment variables will depend on the test environment
-    assert "ENV_PATH" in cache_vars
-    assert "PENV_HOME" in cache_vars
-
+        # Environment variables will depend on the test environment
+        assert "ENV_PATH" in cache_vars
+        assert "PENV_HOME" in cache_vars
 
 
 @CMakePresets_json(
@@ -546,8 +548,8 @@ def test_resolve_nested_macro_values() -> None:
     resolved = presets.resolve_macro_values(CONFIGURE, "with-nested-macros")
 
     # Verify nested macros in environment are resolved
-    source_dir = os.getcwd()  # In the test environment
-    assert resolved["environment"]["NESTED_VAR"] == f"{source_dir}/custom-value"
+    source_dir = Path.cwd()  # In the test environment
+    assert resolved["environment"]["NESTED_VAR"] == f"{source_dir / 'custom-value'}"
 
 
 @CMakePresets_json(
