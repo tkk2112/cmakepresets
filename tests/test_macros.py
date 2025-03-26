@@ -4,6 +4,7 @@ import os
 import platform
 from unittest.mock import patch
 
+from cmakepresets.constants import TEST
 from cmakepresets.macros import MacroResolver, resolve_macros_in_preset, resolve_macros_in_string
 
 
@@ -107,7 +108,7 @@ def test_resolve_in_preset() -> None:
 def test_convenience_functions() -> None:
     """Test the module-level convenience functions."""
     # Test string resolution
-    context = {"name": "test", "value": 42}
+    context = {"name": TEST, "value": 42}
     assert resolve_macros_in_string("${name} has value ${value}", context) == "test has value 42"
 
     # Test preset resolution

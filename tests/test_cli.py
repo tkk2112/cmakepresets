@@ -7,7 +7,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from rich.table import Table
 
-from cmakepresets import cli
+from cmakepresets import __name__, cli
+from cmakepresets.constants import BUILD, CONFIGURE, PRESET_MAP, TEST
 from cmakepresets.presets import CMakePresets
 
 from .decorators import CMakePresets_json
@@ -52,15 +53,15 @@ def mock_presets() -> MagicMock:
         "default": {
             "preset": presets.configure_presets[0],
             "dependents": {
-                "buildPresets": [presets.build_presets[0]],
-                "testPresets": [presets.test_presets[0]],
+                PRESET_MAP[BUILD]: [presets.build_presets[0]],
+                PRESET_MAP[TEST]: [presets.test_presets[0]],
             },
         },
         "debug": {
             "preset": presets.configure_presets[1],
             "dependents": {
-                "buildPresets": [presets.build_presets[1]],
-                "testPresets": [],
+                PRESET_MAP[BUILD]: [presets.build_presets[1]],
+                PRESET_MAP[TEST]: [],
             },
         },
     }
@@ -90,13 +91,13 @@ def test_create_parser() -> None:
 
 def test_get_presets_by_type(mock_presets: MagicMock) -> None:
     """Test getting presets of different types."""
-    result = cli.get_presets_by_type(mock_presets, "configure")
+    result = cli.get_presets_by_type(mock_presets, CONFIGURE)
     assert result == mock_presets.configure_presets
 
-    result = cli.get_presets_by_type(mock_presets, "build")
+    result = cli.get_presets_by_type(mock_presets, BUILD)
     assert result == mock_presets.build_presets
 
-    result = cli.get_presets_by_type(mock_presets, "test")
+    result = cli.get_presets_by_type(mock_presets, TEST)
     assert result == mock_presets.test_presets
 
     # Test unknown type
@@ -121,29 +122,28 @@ def test_filter_presets() -> None:
     assert len(filtered) == 2
 
 
-@CMakePresets_json("""
-{
-    "version": 4,
-    "cmakeMinimumRequired": {"major": 3, "minor": 28, "patch": 0},
-    "configurePresets": [
-        {"name": "default", "generator": "Ninja"},
-        {"name": "debug", "generator": "Ninja"},
-        {"name": "hidden-preset", "generator": "Ninja", "hidden": true}
-    ],
-    "buildPresets": [
-        {"name": "default-build", "configurePreset": "default"},
-        {"name": "debug-build", "configurePreset": "debug"}
-    ],
-    "testPresets": [
-        {"name": "default-test", "configurePreset": "default"}
-    ]
-}
-""")
+@CMakePresets_json(
+    {
+        "version": 4,
+        "cmakeMinimumRequired": {"major": 3, "minor": 28, "patch": 0},
+        PRESET_MAP[CONFIGURE]: [
+            {"name": "default", "generator": "Ninja"},
+            {"name": "debug", "generator": "Ninja"},
+            {"name": "hidden-preset", "generator": "Ninja", "hidden": True},
+        ],
+        PRESET_MAP[BUILD]: [
+            {"name": "default-build", "configurePreset": "default"},
+            {"name": "debug-build", "configurePreset": "debug"},
+        ],
+        PRESET_MAP[TEST]: [
+            {"name": "default-test", "configurePreset": "default"},
+        ],
+    },
 def test_handle_list_command_flat(mock_console_print: MagicMock) -> None:
     """Test the list command with flat output."""
-    args = argparse.Namespace(file="CMakePresets.json", directory=None, command="list", type="configure", show_hidden=False, flat=True, verbose=10)
+    args = argparse.Namespace(file="CMakePresets.json", directory=None, command="list", type=CONFIGURE, show_hidden=False, flat=True, verbose=10)
 
-    with patch("sys.argv", ["cmakepresets", "-vvvv", "list", "--type", "configure", "--flat"]):
+    with patch("sys.argv", [__name__, "-vvvv", "list", "--type", CONFIGURE, "--flat"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 
@@ -157,28 +157,28 @@ def test_handle_list_command_flat(mock_console_print: MagicMock) -> None:
             assert "hidden-preset" not in output_text
 
 
-@CMakePresets_json("""
-{
-    "version": 4,
-    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
-    "configurePresets": [
-        {"name": "default", "generator": "Ninja"},
-        {"name": "debug", "generator": "Ninja"}
-    ],
-    "buildPresets": [
-        {"name": "default-build", "configurePreset": "default"},
-        {"name": "debug-build", "configurePreset": "debug"}
-    ],
-    "testPresets": [
-        {"name": "default-test", "configurePreset": "default"}
-    ]
-}
-""")
+@CMakePresets_json(
+    {
+        "version": 4,
+        "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+        PRESET_MAP[CONFIGURE]: [
+            {"name": "default", "generator": "Ninja"},
+            {"name": "debug", "generator": "Ninja"},
+        ],
+        PRESET_MAP[BUILD]: [
+            {"name": "default-build", "configurePreset": "default"},
+            {"name": "debug-build", "configurePreset": "debug"},
+        ],
+        PRESET_MAP[TEST]: [
+            {"name": "default-test", "configurePreset": "default"},
+        ],
+    },
+)
 def test_handle_list_command_tabular(mock_console_print: MagicMock) -> None:
     """Test the list command with tabular output."""
     args = argparse.Namespace(file="CMakePresets.json", directory=None, command="list", type="all", show_hidden=False, flat=False, verbose=0)
 
-    with patch("sys.argv", ["cmakepresets", "list", "--type", "all"]):
+    with patch("sys.argv", [__name__, "list", "--type", "all"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 
@@ -190,15 +190,15 @@ def test_handle_list_command_tabular(mock_console_print: MagicMock) -> None:
             assert isinstance(table_arg, Table)
 
 
-@CMakePresets_json("""
-{
-    "version": 4,
-    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
-    "configurePresets": [
-        {"name": "default", "generator": "Ninja", "cacheVariables": {"CMAKE_BUILD_TYPE": "Debug"}}
-    ]
-}
-""")
+@CMakePresets_json(
+    {
+        "version": 4,
+        "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+        PRESET_MAP[CONFIGURE]: [
+            {"name": "default", "generator": "Ninja", "cacheVariables": {"CMAKE_BUILD_TYPE": "Debug"}},
+        ],
+    },
+)
 def test_handle_show_command(mock_console_print: MagicMock) -> None:
     """Test the show command."""
     # Test with standard output
@@ -207,14 +207,14 @@ def test_handle_show_command(mock_console_print: MagicMock) -> None:
         directory=None,
         command="show",
         preset_name="default",
-        type="configure",
+        type=CONFIGURE,
         json=False,
         flatten=False,
         resolve=False,
         verbose=0,
     )
 
-    with patch("sys.argv", ["cmakepresets", "show", "default", "--type", "configure"]):
+    with patch("sys.argv", [__name__, "show", "default", "--type", CONFIGURE]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 
@@ -237,15 +237,15 @@ def test_handle_show_command(mock_console_print: MagicMock) -> None:
                 assert parsed["cacheVariables"]["CMAKE_BUILD_TYPE"] == "Debug"
 
 
-@CMakePresets_json("""
-{
-    "version": 4,
-    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
-    "configurePresets": [
-        {"name": "default", "generator": "Ninja"}
-    ]
-}
-""")
+@CMakePresets_json(
+    {
+        "version": 4,
+        "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+        PRESET_MAP[CONFIGURE]: [
+            {"name": "default", "generator": "Ninja"},
+        ],
+    },
+)
 def test_handle_show_command_not_found(mock_console_print: MagicMock) -> None:
     """Test the show command with non-existent preset."""
     args = argparse.Namespace(
@@ -260,7 +260,7 @@ def test_handle_show_command_not_found(mock_console_print: MagicMock) -> None:
         verbose=0,
     )
 
-    with patch("sys.argv", ["cmakepresets", "show", "nonexistent"]):
+    with patch("sys.argv", [__name__, "show", "nonexistent"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 
@@ -272,21 +272,21 @@ def test_handle_show_command_not_found(mock_console_print: MagicMock) -> None:
             assert "Error" in str(error_msg)
 
 
-@CMakePresets_json("""
-{
-    "version": 4,
-    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
-    "configurePresets": [
-        {"name": "default", "generator": "Ninja"}
-    ],
-    "buildPresets": [
-        {"name": "default-build", "configurePreset": "default"}
-    ],
-    "testPresets": [
-        {"name": "default-test", "configurePreset": "default"}
-    ]
-}
-""")
+@CMakePresets_json(
+    {
+        "version": 4,
+        "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+        PRESET_MAP[CONFIGURE]: [
+            {"name": "default", "generator": "Ninja"},
+        ],
+        PRESET_MAP[BUILD]: [
+            {"name": "default-build", "configurePreset": "default"},
+        ],
+        PRESET_MAP[TEST]: [
+            {"name": "default-test", "configurePreset": "default"},
+        ],
+    },
+)
 def test_handle_related_command(mock_console_print: MagicMock) -> None:
     """Test the related command."""
     args = argparse.Namespace(
@@ -300,7 +300,7 @@ def test_handle_related_command(mock_console_print: MagicMock) -> None:
         verbose=0,
     )
 
-    with patch("sys.argv", ["cmakepresets", "related", "default", "--type", "all"]):
+    with patch("sys.argv", [__name__, "related", "default", "--type", "all"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 
@@ -316,8 +316,8 @@ def test_handle_related_command(mock_console_print: MagicMock) -> None:
             mock_console_print.reset_mock()
 
             # Test with specific type
-            args.type = "build"
-            with patch("sys.argv", ["cmakepresets", "related", "default", "--type", "build"]):
+            args.type = BUILD
+            with patch("sys.argv", [__name__, "related", "default", "--type", BUILD]):
                 with patch("argparse.ArgumentParser.parse_args", return_value=args):
                     result = cli.main()
 
@@ -327,21 +327,21 @@ def test_handle_related_command(mock_console_print: MagicMock) -> None:
                     assert "default-build" in output_text
 
 
-@CMakePresets_json("""
-{
-    "version": 4,
-    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
-    "configurePresets": [
-        {"name": "default", "generator": "Ninja"}
-    ],
-    "buildPresets": [
-        {"name": "default-build", "configurePreset": "default"}
-    ],
-    "testPresets": [
-        {"name": "default-test", "configurePreset": "default"}
-    ]
-}
-""")
+@CMakePresets_json(
+    {
+        "version": 4,
+        "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+        PRESET_MAP[CONFIGURE]: [
+            {"name": "default", "generator": "Ninja"},
+        ],
+        PRESET_MAP[BUILD]: [
+            {"name": "default-build", "configurePreset": "default"},
+        ],
+        PRESET_MAP[TEST]: [
+            {"name": "default-test", "configurePreset": "default"},
+        ],
+    },
+)
 def test_handle_related_command_plain_output(mock_console_print: MagicMock) -> None:
     """Test the related command with plain output for scripts."""
     args = argparse.Namespace(
@@ -355,7 +355,7 @@ def test_handle_related_command_plain_output(mock_console_print: MagicMock) -> N
         verbose=0,
     )
 
-    with patch("sys.argv", ["cmakepresets", "related", "default", "--plain"]):
+    with patch("sys.argv", [__name__, "related", "default", "--plain"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             with patch("builtins.print") as mock_print:
                 result = cli.main()
@@ -368,15 +368,15 @@ def test_handle_related_command_plain_output(mock_console_print: MagicMock) -> N
                 assert "test" in output
 
 
-@CMakePresets_json("""
-{
-    "version": 4,
-    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
-    "configurePresets": [
-        {"name": "default", "generator": "Ninja"}
-    ]
-}
-""")
+@CMakePresets_json(
+    {
+        "version": 4,
+        "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+        PRESET_MAP[CONFIGURE]: [
+            {"name": "default", "generator": "Ninja"},
+        ],
+    },
+)
 def test_handle_related_command_not_found(mock_console_print: MagicMock) -> None:
     """Test the related command with non-existent configure preset."""
     args = argparse.Namespace(
@@ -390,7 +390,7 @@ def test_handle_related_command_not_found(mock_console_print: MagicMock) -> None
         verbose=0,
     )
 
-    with patch("sys.argv", ["cmakepresets", "related", "nonexistent"]):
+    with patch("sys.argv", [__name__, "related", "nonexistent"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 
@@ -401,20 +401,20 @@ def test_handle_related_command_not_found(mock_console_print: MagicMock) -> None
             assert "nonexistent" in str(error_msg)
 
 
-@CMakePresets_json("""
-{
-    "version": 4,
-    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
-    "configurePresets": [
-        {"name": "default", "generator": "Ninja"}
-    ]
-}
-""")
+@CMakePresets_json(
+    {
+        "version": 4,
+        "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+        PRESET_MAP[CONFIGURE]: [
+            {"name": "default", "generator": "Ninja"},
+        ],
+    },
+)
 def test_main_with_list_command(mock_console_print: MagicMock) -> None:
     """Test the main function with list command."""
-    args = argparse.Namespace(file="CMakePresets.json", directory=None, command="list", type="configure", show_hidden=False, flat=False, verbose=0)
+    args = argparse.Namespace(file="CMakePresets.json", directory=None, command="list", type=CONFIGURE, show_hidden=False, flat=False, verbose=0)
 
-    with patch("sys.argv", ["cmakepresets", "list"]):
+    with patch("sys.argv", [__name__, "list"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 
@@ -425,21 +425,20 @@ def test_main_with_list_command(mock_console_print: MagicMock) -> None:
             assert "default" in output_text
 
 
-@CMakePresets_json("""
-{
-    "version": 4,
-    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
-    "configurePresets": [
-        {"name": "default", "generator": "Ninja"}
-    ]
-}
-""")
+@CMakePresets_json(
+    {
+        "version": 4,
+        "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+        PRESET_MAP[CONFIGURE]: [
+            {"name": "default", "generator": "Ninja"},
+        ],
+    },
 def test_main_error_handling(mock_console_print: MagicMock) -> None:
     """Test main function error handling."""
     # Create a situation that would cause an exception
-    args = argparse.Namespace(file="NonExistentFile.json", directory=None, command="list", type="configure", show_hidden=False, flat=False, verbose=0)
+    args = argparse.Namespace(file="NonExistentFile.json", directory=None, command="list", type=CONFIGURE, show_hidden=False, flat=False, verbose=0)
 
-    with patch("sys.argv", ["cmakepresets", "--file", "NonExistentFile.json", "list"]):
+    with patch("sys.argv", [__name__, "--file", "NonExistentFile.json", "list"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 
@@ -451,29 +450,29 @@ def test_main_error_handling(mock_console_print: MagicMock) -> None:
             assert "Error" in str(error_msg)
 
 
-@CMakePresets_json("""
-{
-    "version": 4,
-    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
-    "configurePresets": [
-        {"name": "default", "generator": "Ninja"},
-        {"name": "release", "generator": "Ninja", "cacheVariables": {"CMAKE_BUILD_TYPE": "Release"}}
-    ],
-    "buildPresets": [
-        {"name": "default-build", "configurePreset": "default"},
-        {"name": "release-build", "configurePreset": "release"}
-    ],
-    "testPresets": [
-        {"name": "default-test", "configurePreset": "default"}
-    ]
-}
-""")
+@CMakePresets_json(
+    {
+        "version": 4,
+        "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+        PRESET_MAP[CONFIGURE]: [
+            {"name": "default", "generator": "Ninja"},
+            {"name": "release", "generator": "Ninja", "cacheVariables": {"CMAKE_BUILD_TYPE": "Release"}},
+        ],
+        PRESET_MAP[BUILD]: [
+            {"name": "default-build", "configurePreset": "default"},
+            {"name": "release-build", "configurePreset": "release"},
+        ],
+        PRESET_MAP[TEST]: [
+            {"name": "default-test", "configurePreset": "default"},
+        ],
+    },
+)
 def test_integration_list_command(mock_console_print: MagicMock) -> None:
     """Integration test for list command using real file system."""
     # Create CLI arguments
     args = argparse.Namespace(file="CMakePresets.json", directory=None, command="list", type="all", show_hidden=False, flat=True, verbose=0)
 
-    with patch("sys.argv", ["cmakepresets", "--file", "CMakePresets.json", "list"]):
+    with patch("sys.argv", [__name__, "--file", "CMakePresets.json", "list"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 
@@ -486,16 +485,16 @@ def test_integration_list_command(mock_console_print: MagicMock) -> None:
             assert "release" in output_text
 
 
-@CMakePresets_json("""
-{
-    "version": 4,
-    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
-    "configurePresets": [
-        {"name": "base", "generator": "Ninja", "cacheVariables": {"VAR1": "base_value"}},
-        {"name": "derived", "inherits": "base", "cacheVariables": {"VAR2": "derived_value"}}
-    ]
-}
-""")
+@CMakePresets_json(
+    {
+        "version": 4,
+        "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+        PRESET_MAP[CONFIGURE]: [
+            {"name": "base", "generator": "Ninja", "cacheVariables": {"VAR1": "base_value"}},
+            {"name": "derived", "inherits": "base", "cacheVariables": {"VAR2": "derived_value"}},
+        ],
+    },
+)
 def test_integration_show_command(mock_console_print: MagicMock) -> None:
     """Integration test for show command using real file system."""
     # Create CLI arguments
@@ -504,14 +503,14 @@ def test_integration_show_command(mock_console_print: MagicMock) -> None:
         directory=None,
         command="show",
         preset_name="derived",
-        type="configure",
+        type=CONFIGURE,
         json=True,
         flatten=True,
         resolve=False,
         verbose=0,
     )
 
-    with patch("sys.argv", ["cmakepresets", "--file", "CMakePresets.json", "show", "derived", "--json"]):
+    with patch("sys.argv", [__name__, "--file", "CMakePresets.json", "show", "derived", "--json"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 
@@ -529,21 +528,21 @@ def test_integration_show_command(mock_console_print: MagicMock) -> None:
             assert parsed["cacheVariables"]["VAR2"] == "derived_value"
 
 
-@CMakePresets_json("""
-{
-    "version": 4,
-    "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
-    "configurePresets": [
-        {"name": "default", "generator": "Ninja"}
-    ],
-    "buildPresets": [
-        {"name": "default-build", "configurePreset": "default"}
-    ],
-    "testPresets": [
-        {"name": "default-test", "configurePreset": "default"}
-    ]
-}
-""")
+@CMakePresets_json(
+    {
+        "version": 4,
+        "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+        PRESET_MAP[CONFIGURE]: [
+            {"name": "default", "generator": "Ninja"},
+        ],
+        PRESET_MAP[BUILD]: [
+            {"name": "default-build", "configurePreset": "default"},
+        ],
+        PRESET_MAP[TEST]: [
+            {"name": "default-test", "configurePreset": "default"},
+        ],
+    },
+)
 def test_integration_related_command(mock_console_print: MagicMock) -> None:
     """Integration test for related command using real file system."""
     # Create CLI arguments
@@ -558,7 +557,7 @@ def test_integration_related_command(mock_console_print: MagicMock) -> None:
         verbose=0,
     )
 
-    with patch("sys.argv", ["cmakepresets", "--file", "CMakePresets.json", "related", "default"]):
+    with patch("sys.argv", [__name__, "--file", "CMakePresets.json", "related", "default"]):
         with patch("argparse.ArgumentParser.parse_args", return_value=args):
             result = cli.main()
 
@@ -571,23 +570,23 @@ def test_integration_related_command(mock_console_print: MagicMock) -> None:
             assert "default-test" in output_text
 
 
-@CMakePresets_json("""
-{
-    "version": 6,
-    "cmakeMinimumRequired": {"major": 3, "minor": 29, "patch": 0},
-    "configurePresets": [
-        {
-            "name": "macro-test",
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/build/${presetName}",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "SOURCE_DIR": "${sourceDir}"
-            }
-        }
-    ]
-}
-""")
+@CMakePresets_json(
+    {
+        "version": 6,
+        "cmakeMinimumRequired": {"major": 3, "minor": 29, "patch": 0},
+        PRESET_MAP[CONFIGURE]: [
+            {
+                "name": "macro-test",
+                "generator": "Ninja",
+                "binaryDir": "${sourceDir}/build/${presetName}",
+                "cacheVariables": {
+                    "CMAKE_BUILD_TYPE": "Debug",
+                    "SOURCE_DIR": "${sourceDir}",
+                },
+            },
+        ],
+    },
+)
 def test_handle_show_command_with_resolve(mock_console_print: MagicMock) -> None:
     """Test the show command with macro resolution."""
     # Test with resolve option
