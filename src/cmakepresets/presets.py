@@ -113,7 +113,7 @@ class CMakePresets:
             Preset dict if found, None otherwise
         """
         logger.debug(f"Looking for {preset_type} preset with name '{name}'")
-        preset_key = PRESET_TYPES[preset_type]
+        preset_key = PRESET_MAP[preset_type]
 
         for filepath, file_data in self.parser.loaded_files.items():
             if preset_key not in file_data:
@@ -137,8 +137,8 @@ class CMakePresets:
         Returns:
             The preset dict if found, None otherwise
         """
-        for preset_type in PRESET_TYPES:
-            for preset in self._iter_presets_of_type(PRESET_TYPES[preset_type]):
+        for preset_type in PRESET_MAP:
+            for preset in self._iter_presets_of_type(PRESET_MAP[preset_type]):
                 if preset.get("name") == name:
                     return preset
 
@@ -328,9 +328,9 @@ class CMakePresets:
 
         # Return all related presets (build, test, package)
         return {
-            BUILD: dependent_presets.get("buildPresets", []),
-            TEST: dependent_presets.get("testPresets", []),
-            PACKAGE: dependent_presets.get("packagePresets", []),
+            BUILD: dependent_presets.get(PRESET_MAP[BUILD], []),
+            TEST: dependent_presets.get(PRESET_MAP[TEST], []),
+            PACKAGE: dependent_presets.get(PRESET_MAP[PACKAGE], []),
         }
 
     def resolve_macro_values(self, preset_type: str, preset_name: str, env: dict[str, str] | None = None) -> dict[str, Any]:
