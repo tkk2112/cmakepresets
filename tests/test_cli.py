@@ -139,6 +139,7 @@ def test_filter_presets() -> None:
             {"name": "default-test", "configurePreset": "default"},
         ],
     },
+)
 def test_handle_list_command_flat(mock_console_print: MagicMock) -> None:
     """Test the list command with flat output."""
     args = argparse.Namespace(file="CMakePresets.json", directory=None, command="list", type=CONFIGURE, show_hidden=False, flat=True, verbose=10)
@@ -433,6 +434,7 @@ def test_main_with_list_command(mock_console_print: MagicMock) -> None:
             {"name": "default", "generator": "Ninja"},
         ],
     },
+)
 def test_main_error_handling(mock_console_print: MagicMock) -> None:
     """Test main function error handling."""
     # Create a situation that would cause an exception
