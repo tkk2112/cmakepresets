@@ -1,10 +1,11 @@
 import json
 from pathlib import Path
-from typing import Any, Final
+from typing import Any, Final, cast
 
 from . import logger as mainLogger
 from . import utils
 from .exceptions import FileParseError, FileReadError, VersionError
+from .paths import CMakeRoot
 from .schema import check_cmake_version_for_schema, get_schema, validate_json_against_schema
 
 logger: Final = mainLogger.getChild(__name__)
@@ -24,24 +25,29 @@ class Parser:
         Parse a CMakePresets.json file and all included files.
 
         Args:
-            filepath: Path to the CMakePresets.json file
+            filepath: Path to the CMakePresets.json file or directory
 
         Raises:
             FileReadError: If the file cannot be read
             FileParseError: If the file cannot be parsed as JSON
-            VersionError: If the version is not supported (< 4)
+            VersionError: If the version is not supported (< 2)
+            FileNotFoundError: If the file doesn't exist
         """
-        filepath = Path(filepath).resolve()
+        self.root = CMakeRoot(filepath)
+
+        if not self.root.has_presets:
+            logger.error(f"File not found: {filepath}")
+            raise FileNotFoundError(f"File not found: {filepath}")
+
         logger.info(f"Starting to parse file: {filepath}")
-        self.root_dir = filepath.parent  # store root directory
 
         # Clear existing data
         self.loaded_files = {}
         self.processed_files = set()
 
         # Start with the main file using its relative name
-        self._load_file(filepath)
-        main_rel = filepath.name
+        self._load_file(cast(Path, self.root.presets_file))
+        main_rel = cast(Path, self.root.presets_file).name
         schema_version = self._validate_version_requirements(main_rel, self.loaded_files[main_rel])
 
         logger.debug(f"Getting schema for version {schema_version}")
@@ -50,13 +56,9 @@ class Parser:
         validate_json_against_schema(self.loaded_files[main_rel], schema)
         check_cmake_version_for_schema(schema_version, self.loaded_files[main_rel].get("cmakeMinimumRequired", {}))
 
-        # Check if there's a user presets file relative to root_dir
-        user_preset_path = self.root_dir / "CMakeUserPresets.json"
-        if user_preset_path.exists():
-            logger.info(f"Found user preset file: {user_preset_path}")
-            self._load_file(user_preset_path)
-        else:
-            logger.debug("No user preset file found")
+        # Check if there's a user presets file (only for CMakePresets.json files)
+        if self.root.has_user_presets:
+            self._load_file(cast(Path, self.root.user_presets_file))
 
         # Process includes recursively (using relative paths)
         logger.debug("Processing includes recursively")
@@ -80,17 +82,18 @@ class Parser:
             content = utils.read_file_text(filepath)
         except OSError as e:
             logger.error(f"Failed to read file: {filepath}, error: {e}")
-            raise FileReadError(f"Unable to read file {filepath}: {e}")
+            raise FileReadError(f"Unable to read '{filepath.name}': {e}") from e
 
         try:
             json_data = json.loads(content)
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON in file: {filepath}, error: {e}")
-            raise FileParseError(f"Unable to parse JSON in {filepath}: {e}")
+            line = e.lineno
+            col = e.colno
+            raise FileParseError(f"JSON syntax error in '{filepath.name}' at line {line}, column {col}: {e.msg}") from e
 
-        # Store file content with key relative to self.root_dir
         try:
-            relative_path = str(filepath.relative_to(self.root_dir))
+            relative_path = self.root.get_relative_path(filepath)
         except ValueError:
             # If the path is not relative to root_dir, use the full path as the key
             relative_path = str(filepath)
@@ -149,10 +152,10 @@ class Parser:
             if "include" in current_data and isinstance(current_data["include"], list):
                 logger.debug(f"Found {len(current_data['include'])} includes in {current_file}")
                 for include_path in current_data["include"]:
-                    # If include path is relative, resolve it relative to current_dir and then self.root_dir
-                    include_abs = (self.root_dir / current_dir / include_path).resolve()
+                    # If include path is relative, resolve it relative to current_dir and then self.root.source_dir
+                    include_abs = (self.root.source_dir / current_dir / include_path).resolve()
                     try:
-                        include_rel = str(include_abs.relative_to(self.root_dir))
+                        include_rel = str(include_abs.relative_to(self.root.source_dir))
                     except ValueError:
                         # If include_abs is not under root_dir, use absolute path as fallback
                         include_rel = str(include_abs)

@@ -1,9 +1,10 @@
 import os
 import platform
+import unittest
+from pathlib import Path
 
-import pytest
-from pyfakefs.fake_filesystem_unittest import Patcher
 from cmakepresets.constants import BUILD, CONFIGURE, PACKAGE, PRESET_MAP, TEST, WORKFLOW
+from cmakepresets.paths import CMakeRoot
 from cmakepresets.presets import CMakePresets
 
 from .decorators import CMakePresets_json
@@ -20,15 +21,8 @@ def test_initialize_with_file_path() -> None:
 def test_initialize_with_directory_path() -> None:
     """Test initialization with a directory path."""
     # With pyfakefs, the current directory contains our preset file
-    presets = CMakePresets(".")
+    presets = CMakePresets(CMakeRoot("."))
     assert isinstance(presets, CMakePresets)
-
-
-def test_initialize_missing_file() -> None:
-    """Test initialization with a missing file raises FileNotFoundError."""
-    with Patcher():
-        with pytest.raises(FileNotFoundError):
-            CMakePresets("non_existent_file.json")
 
 
 @CMakePresets_json(

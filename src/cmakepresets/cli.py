@@ -9,6 +9,8 @@ from rich.tree import Tree
 from . import console, log
 from . import logger as mainLogger
 from .constants import BUILD, CONFIGURE, PACKAGE, PRESET_MAP, PRESET_TYPES, TEST, WORKFLOW
+from .paths import CMakeRoot
+from .presets import CMakePresets
 
 logger: Final = mainLogger.getChild(__name__)
 
@@ -733,7 +735,7 @@ def main() -> int:
         # Create CMakePresets instance from file or directory
         path = args.file if args.file else args.directory
         logger.info(f"Loading presets from {path}")
-        presets = CMakePresets(path)
+        presets = CMakePresets(CMakeRoot(path))
         logger.debug(f"Loaded {len(presets.configure_presets)} configure presets")
         logger.debug(f"Loaded {len(presets.build_presets)} build presets")
         logger.debug(f"Loaded {len(presets.test_presets)} test presets")
