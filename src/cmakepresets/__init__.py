@@ -21,4 +21,6 @@ __all__: Final = [
     "FileParseError",
     "VersionError",
 ]
+
+__name__ = "cmakepresets"
 __version__ = "v0.3.1"  # {x-release-please-version}

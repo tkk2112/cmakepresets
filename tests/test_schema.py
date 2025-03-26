@@ -5,6 +5,7 @@ import jsonschema.exceptions
 import pytest
 
 from cmakepresets import log, logger
+from cmakepresets.constants import BUILD, CONFIGURE, PACKAGE, PRESET_MAP, TEST, WORKFLOW
 from cmakepresets.exceptions import VersionError
 from cmakepresets.schema import check_cmake_version_for_schema, get_schema, validate_json_against_schema
 
@@ -19,24 +20,25 @@ def test_get_schema() -> None:
 
     version = 2
     schema = get_schema(version)
-    assert in_schema(version, "configurePresets", schema)
-    assert in_schema(version, "buildPresets", schema)
-    assert in_schema(version, "testPresets", schema)
-    assert not in_schema(version, "packagePresets", schema)
-    assert not in_schema(version, "workflowPresets", schema)
+    assert in_schema(version, PRESET_MAP[CONFIGURE], schema)
+    assert in_schema(version, PRESET_MAP[BUILD], schema)
+    assert in_schema(version, PRESET_MAP[TEST], schema)
+    assert not in_schema(version, PRESET_MAP[PACKAGE], schema)
+    assert not in_schema(version, PRESET_MAP[WORKFLOW], schema)
 
     version = 6
     schema = get_schema(version)
-    assert in_schema(version, "packagePresets", schema)
-    assert in_schema(version, "workflowPresets", schema)
+    assert in_schema(version, PRESET_MAP[PACKAGE], schema)
+    assert in_schema(version, PRESET_MAP[WORKFLOW], schema)
 
     version = 10
     schema = get_schema(version)
-    assert in_schema(version, "configurePresets", schema)
-    assert in_schema(version, "buildPresets", schema)
-    assert in_schema(version, "testPresets", schema)
-    assert in_schema(version, "packagePresets", schema)
-    assert in_schema(version, "workflowPresets", schema)
+    assert in_schema(version, PRESET_MAP[CONFIGURE], schema)
+    assert in_schema(version, PRESET_MAP[BUILD], schema)
+    assert in_schema(version, PRESET_MAP[TEST], schema)
+    assert in_schema(version, PRESET_MAP[PACKAGE], schema)
+    assert in_schema(version, PRESET_MAP[WORKFLOW], schema)
+
 
 
 def test_schema_getter() -> None:
@@ -80,7 +82,7 @@ def test_validate_testpresets_field_version_compatibility() -> None:
     """Test that using testPresets field with incompatible version gives clear error."""
     schema = get_schema(3)  # Get schema that supports version 3
 
-    valid_data = {"version": 3, "cmakeMinimumRequired": {"major": 3, "minor": 20, "patch": 0}, "testPresets": [{"name": "test"}]}
+    valid_data = {"version": 3, "cmakeMinimumRequired": {"major": 3, "minor": 20, "patch": 0}, PRESET_MAP[TEST]: [{"name": TEST}]}
     validate_json_against_schema(valid_data, schema)  # Should not raise
 
     invalid_data = {"version": 2, "cmakeMinimumRequired": {"major": 3, "minor": 20, "patch": 0}, "include": []}

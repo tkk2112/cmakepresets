@@ -3,6 +3,7 @@ import os
 import pytest
 from pyfakefs.fake_filesystem_unittest import Patcher
 
+from cmakepresets.constants import CONFIGURE, PRESET_MAP
 from cmakepresets.exceptions import FileParseError, FileReadError, VersionError
 from cmakepresets.parser import Parser
 
@@ -17,7 +18,7 @@ def test_parser_initialization() -> None:
     assert parser.processed_files == set()
 
 
-@CMakePresets_json('{"version": 4, "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0}}')
+@CMakePresets_json({"version": 4, "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0}})
 def test_parse_file_basic() -> None:
     """Test parsing a basic valid file with version 4."""
     parser = Parser()
@@ -35,7 +36,7 @@ def test_parse_file_missing_version() -> None:
         parser.parse_file("CMakePresets.json")
 
 
-@CMakePresets_json('{"version": 1}')
+@CMakePresets_json({"version": 1})
 def test_parse_file_version_too_low() -> None:
     """Test parsing a file with version less than 2 raises VersionError."""
     parser = Parser()
@@ -43,7 +44,7 @@ def test_parse_file_version_too_low() -> None:
         parser.parse_file("CMakePresets.json")
 
 
-@CMakePresets_json('{"version": 2, "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0}}')
+@CMakePresets_json({"version": 2, "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0}})
 def test_parse_file_valid() -> None:
     """Test that a valid file processes without errors."""
     parser = Parser()
@@ -54,8 +55,8 @@ def test_parse_file_valid() -> None:
 
 @CMakePresets_json(
     {
-        "CMakePresets.json": '{"version": 4, "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0}, "include": ["included.json"]}',
-        "included.json": '{"version": 4, "configurePresets": [{"name": "included-preset"}]}',
+        "CMakePresets.json": {"version": 4, "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0}, "include": ["included.json"]},
+        "included.json": {"version": 4, PRESET_MAP[CONFIGURE]: [{"name": "included-preset"}]},
     },
 )
 def test_parse_file_with_include() -> None:
@@ -74,15 +75,15 @@ def test_parse_file_with_include() -> None:
     assert "included.json" in parser.loaded_files
 
     # Verify the content of included.json has been loaded correctly
-    assert "configurePresets" in parser.loaded_files["included.json"]
-    assert parser.loaded_files["included.json"]["configurePresets"][0]["name"] == "included-preset"
+    assert PRESET_MAP[CONFIGURE] in parser.loaded_files["included.json"]
+    assert parser.loaded_files["included.json"][PRESET_MAP[CONFIGURE]][0]["name"] == "included-preset"
 
 
 @CMakePresets_json(
     {
-        "CMakePresets.json": '{"version": 4, "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0}, "include": ["level1/second.json"]}',
-        "level1/second.json": '{"version": 4, "include": ["../level2/third.json"]}',
-        "level2/third.json": '{"version": 4, "configurePresets": [{"name": "deep-preset"}]}',
+        "CMakePresets.json": {"version": 4, "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0}, "include": ["level1/second.json"]},
+        "level1/second.json": {"version": 4, "include": ["../level2/third.json"]},
+        "level2/third.json": {"version": 4, PRESET_MAP[CONFIGURE]: [{"name": "deep-preset"}]},
     },
 )
 def test_parse_file_with_multi_level_includes() -> None:
@@ -97,14 +98,14 @@ def test_parse_file_with_multi_level_includes() -> None:
     assert "level2/third.json" in parser.processed_files
 
     # Verify the deep included content is merged
-    assert "configurePresets" in parser.loaded_files["level2/third.json"]
-    assert parser.loaded_files["level2/third.json"]["configurePresets"][0]["name"] == "deep-preset"
+    assert PRESET_MAP[CONFIGURE] in parser.loaded_files["level2/third.json"]
+    assert parser.loaded_files["level2/third.json"][PRESET_MAP[CONFIGURE]][0]["name"] == "deep-preset"
 
 
 @CMakePresets_json(
     {
-        "project/CMakePresets.json": '{"version": 4, "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0}, "include": ["configs/dev.json"]}',
-        "project/configs/dev.json": '{"version": 4, "configurePresets": [{"name": "dev-preset"}]}',
+        "project/CMakePresets.json": {"version": 4, "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0}, "include": ["configs/dev.json"]},
+        "project/configs/dev.json": {"version": 4, PRESET_MAP[CONFIGURE]: [{"name": "dev-preset"}]},
     },
 )
 def test_parse_file_with_relative_include_paths() -> None:
@@ -119,14 +120,14 @@ def test_parse_file_with_relative_include_paths() -> None:
     assert "configs/dev.json" in parser.processed_files
 
     # Verify we can find the included content
-    assert "configurePresets" in parser.loaded_files["configs/dev.json"]
-    assert parser.loaded_files["configs/dev.json"]["configurePresets"][0]["name"] == "dev-preset"
+    assert PRESET_MAP[CONFIGURE] in parser.loaded_files["configs/dev.json"]
+    assert parser.loaded_files["configs/dev.json"][PRESET_MAP[CONFIGURE]][0]["name"] == "dev-preset"
 
 
 @CMakePresets_json(
     {
-        "CMakePresets.json": '{"version": 3, "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0}, "configurePresets": [{"name": "base-preset"}]}',
-        "CMakeUserPresets.json": '{"version": 3, "configurePresets": [{"name": "user-preset"}]}',
+        "CMakePresets.json": {"version": 3, "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0}, PRESET_MAP[CONFIGURE]: [{"name": "base-preset"}]},
+        "CMakeUserPresets.json": {"version": 3, PRESET_MAP[CONFIGURE]: [{"name": "user-preset"}]},
     },
 )
 def test_parse_file_with_user_presets() -> None:
@@ -140,14 +141,14 @@ def test_parse_file_with_user_presets() -> None:
     assert "CMakeUserPresets.json" in parser.processed_files
 
     # Verify both presets are included in the result
-    assert "configurePresets" in parser.loaded_files["CMakePresets.json"]
-    assert "configurePresets" in parser.loaded_files["CMakeUserPresets.json"]
+    assert PRESET_MAP[CONFIGURE] in parser.loaded_files["CMakePresets.json"]
+    assert PRESET_MAP[CONFIGURE] in parser.loaded_files["CMakeUserPresets.json"]
 
-    assert parser.loaded_files["CMakePresets.json"]["configurePresets"][0]["name"] == "base-preset"
-    assert parser.loaded_files["CMakeUserPresets.json"]["configurePresets"][0]["name"] == "user-preset"
+    assert parser.loaded_files["CMakePresets.json"][PRESET_MAP[CONFIGURE]][0]["name"] == "base-preset"
+    assert parser.loaded_files["CMakeUserPresets.json"][PRESET_MAP[CONFIGURE]][0]["name"] == "user-preset"
 
 
-@CMakePresets_json({"/tmp/CMakePresets.json": '{"version": 4, "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0}}'})
+@CMakePresets_json({"/tmp/CMakePresets.json": {"version": 4, "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0}}})
 def test_parse_file_with_absolute_path() -> None:
     """Test parsing a file specified with an absolute path."""
     parser = Parser()
@@ -160,8 +161,8 @@ def test_parse_file_with_absolute_path() -> None:
 
 @CMakePresets_json(
     {
-        "CMakePresets.json": '{"version": 4, "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0}, "include": ["/tmp/absolute_include.json"]}',
-        "/tmp/absolute_include.json": '{"version": 4, "configurePresets": [{"name": "absolute-preset"}]}',
+        "CMakePresets.json": {"version": 4, "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0}, "include": ["/tmp/absolute_include.json"]},
+        "/tmp/absolute_include.json": {"version": 4, PRESET_MAP[CONFIGURE]: [{"name": "absolute-preset"}]},
     },
 )
 def test_parse_file_with_absolute_include_path() -> None:
@@ -187,8 +188,8 @@ def test_parse_file_with_absolute_include_path() -> None:
             break
 
     assert absolute_include_content is not None
-    assert "configurePresets" in absolute_include_content
-    assert absolute_include_content["configurePresets"][0]["name"] == "absolute-preset"
+    assert PRESET_MAP[CONFIGURE] in absolute_include_content
+    assert absolute_include_content[PRESET_MAP[CONFIGURE]][0]["name"] == "absolute-preset"
 
 
 def test_parser_read_file_errors() -> None:
@@ -218,9 +219,9 @@ def test_parser_invalid_json() -> None:
 
 @CMakePresets_json(
     {
-        "CMakePresets.json": '{"version": 4,  "include": ["file1.json"]}',
-        "file1.json": '{"version": 4, "include": ["file2.json"]}',
-        "file2.json": '{"version": 4, "include": ["file1.json"]}',
+        "CMakePresets.json": {"version": 4, "include": ["file1.json"]},
+        "file1.json": {"version": 4, "include": ["file2.json"]},
+        "file2.json": {"version": 4, "include": ["file1.json"]},
     },
 )
 def test_parser_deals_with_circular_include_detection() -> None:

@@ -5,6 +5,8 @@ import jsonschema
 from rich.console import Console
 from rich.logging import RichHandler
 
+from . import __name__
+
 CRITICAL: Final = logging.CRITICAL
 ERROR: Final = logging.ERROR
 WARNING: Final = logging.WARNING
@@ -23,7 +25,7 @@ class Logger(logging.Logger):
     """
 
     def __init__(self, level: int = WARNING, colors: bool = True):
-        super().__init__(name="cmakepresets", level=level)
+        super().__init__(name=__name__, level=level)
 
         self.parent = logging.root
 
@@ -36,8 +38,7 @@ class Logger(logging.Logger):
         self.addHandler(handler)
 
     def getChild(self, name: str) -> Any:
-        if "cmakepresets" not in name:
-            name = f"cmakepresets.{name}"
-        child = self.root.manager.getLogger(name)
+        full_name = name if name.startswith(self.name) else f"{self.name}.{name}"
+        child = self.manager.getLogger(full_name)
         child.parent = self
         return child

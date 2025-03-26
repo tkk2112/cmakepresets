@@ -8,12 +8,9 @@ from rich.tree import Tree
 
 from . import console, log
 from . import logger as mainLogger
-from .presets import CMakePresets, PRESET_TYPES
+from .constants import BUILD, CONFIGURE, PACKAGE, PRESET_MAP, PRESET_TYPES, TEST, WORKFLOW
 
 logger: Final = mainLogger.getChild(__name__)
-
-# Base preset type names without "Presets" suffix for CLI
-CLI_PRESET_TYPES: Final = [type for type in PRESET_TYPES]
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -36,7 +33,7 @@ def create_parser() -> argparse.ArgumentParser:
     list_parser.add_argument(
         "--type",
         "-t",
-        choices=CLI_PRESET_TYPES,
+        choices=PRESET_TYPES,
         default="all",
         help="Type of presets to list (default: all)",
     )
@@ -46,7 +43,7 @@ def create_parser() -> argparse.ArgumentParser:
     # Show command
     show_parser = subparsers.add_parser("show", help="Show details of a specific preset")
     show_parser.add_argument("preset_name", help="Name of the preset to display")
-    show_parser.add_argument("--type", "-t", choices=CLI_PRESET_TYPES, help="Type of preset (optional if name is unique)")
+    show_parser.add_argument("--type", "-t", choices=PRESET_TYPES, help="Type of preset (optional if name is unique)")
     show_parser.add_argument("--json", action="store_true", help="Output in JSON format")
     show_parser.add_argument("--flatten", action="store_true", help="Show flattened preset with all inherited values resolved")
     show_parser.add_argument("--resolve", action="store_true", help="Tries to resolve all macros to their actual values")
@@ -54,7 +51,7 @@ def create_parser() -> argparse.ArgumentParser:
     # Related command
     related_parser = subparsers.add_parser("related", help="Show presets related to a specific configure preset")
     related_parser.add_argument("configure_preset", help="Name of the configure preset")
-    related_parser.add_argument("--type", "-t", choices=["build", "test", "package"], default="all", help="Type of related presets to show (default: all)")
+    related_parser.add_argument("--type", "-t", choices=[BUILD, TEST, PACKAGE], default="all", help="Type of related presets to show (default: all)")
     related_parser.add_argument("--show-hidden", action="store_true", help="Show hidden presets")
     related_parser.add_argument("--plain", "-p", action="store_true", help="Output in a simple format suitable for parsing in scripts")
 
@@ -63,15 +60,15 @@ def create_parser() -> argparse.ArgumentParser:
 
 def get_presets_by_type(presets: CMakePresets, preset_type: str) -> list[dict[str, Any]]:
     """Get presets of a specific type."""
-    if preset_type == "configure":
+    if preset_type == CONFIGURE:
         return presets.configure_presets
-    elif preset_type == "build":
+    elif preset_type == BUILD:
         return presets.build_presets
-    elif preset_type == "test":
+    elif preset_type == TEST:
         return presets.test_presets
-    elif preset_type == "package":
+    elif preset_type == PACKAGE:
         return presets.package_presets
-    elif preset_type == "workflow":
+    elif preset_type == WORKFLOW:
         return presets.workflow_presets
     return []
 
@@ -86,7 +83,7 @@ def handle_list_command(presets: CMakePresets, args: argparse.Namespace) -> int:
 
 def _display_flat_preset_list(presets: CMakePresets, args: argparse.Namespace) -> int:
     """Display a flat list of presets."""
-    preset_types = [args.type] if args.type != "all" else CLI_PRESET_TYPES
+    preset_types = [args.type] if args.type != "all" else PRESET_TYPES
 
     console.print("[bold]CMake Presets:[/bold]")
     found_presets = False
@@ -185,7 +182,7 @@ def _display_tabular_preset_list(presets: CMakePresets, args: argparse.Namespace
 def _create_presets_table() -> Table:
     """Create the table for displaying presets."""
     table = Table(title="CMake Presets")
-    table.add_column("Configure", style="cyan", justify="left")
+    table.add_column(CONFIGURE, style="cyan", justify="left")
     table.add_column("Build", style="blue", justify="left")
     table.add_column("Test", style="green", justify="left")
     return table
@@ -199,8 +196,8 @@ def _add_separator_row(table: Table) -> None:
 
 def _add_preset_group_to_table(table: Table, name: str, config_preset: dict[str, Any], dependents: dict[str, list[dict[str, Any]]]) -> None:
     """Add a preset group (configure preset and its dependents) to the table."""
-    build_presets = dependents.get("buildPresets", [])
-    test_presets = dependents.get("testPresets", [])
+    build_presets = dependents.get(PRESET_MAP[BUILD], [])
+    test_presets = dependents.get(PRESET_MAP[TEST], [])
 
     # Format configure preset name with build/test counts
     config_display = _format_configure_preset_display(name, config_preset, build_presets, test_presets)
@@ -315,7 +312,7 @@ def _find_preset(presets: CMakePresets, preset_name: str, preset_type: str | Non
         found_type = preset_type
     else:
         # If type is not specified, look in all preset types
-        for pt in CLI_PRESET_TYPES:
+        for pt in PRESET_TYPES:
             preset = presets.get_preset_by_name(pt, preset_name)
             if preset:
                 found_preset = preset
@@ -576,7 +573,7 @@ def _get_configure_preset(presets: CMakePresets, preset_name: str, show_error: b
         Configure preset or None if not found
     """
     # Find the configure preset
-    configure_preset = presets.get_preset_by_name("configure", preset_name)
+    configure_preset = presets.get_preset_by_name(CONFIGURE, preset_name)
     if not configure_preset and show_error:
         console.print(f"[bold red]Error:[/bold red] Configure preset '{preset_name}' not found")
     return configure_preset
@@ -632,7 +629,7 @@ def _get_available_preset_types(related_presets: dict[str, list[dict[str, Any]]]
     """Get a list of available preset types that have at least one preset."""
     available_types = []
 
-    for preset_type in ["build", "test", "package"]:
+    for preset_type in [BUILD, TEST, PACKAGE]:
         presets_list = related_presets.get(preset_type, [])
         if not presets_list:
             continue
@@ -691,7 +688,7 @@ def handle_related_command(presets: CMakePresets, args: argparse.Namespace) -> i
         return _handle_related_plain_output(args, related_presets)
 
     # Get preset types to display based on filter
-    preset_types_to_display = [preset_type] if preset_type in ["build", "test", "package"] else ["build", "test", "package"]
+    preset_types_to_display = [preset_type] if preset_type in [BUILD, TEST, PACKAGE] else [BUILD, TEST, PACKAGE]
 
     # Print rich formatted output
     found_any = _print_rich_related_output(args.configure_preset, related_presets, preset_types_to_display, args.show_hidden)

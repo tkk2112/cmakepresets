@@ -4,18 +4,11 @@ from pathlib import Path
 from typing import Any, Final, cast
 
 from . import logger as mainLogger
+from .constants import BUILD, CONFIGURE, PACKAGE, PRESET_MAP, TEST, WORKFLOW
 from .macros import resolve_macros_in_preset
 from .parser import Parser
 
 logger: Final = mainLogger.getChild(__name__)
-
-PRESET_TYPES: Final = {
-    "configure": "configurePresets",
-    "build": "buildPresets",
-    "test": "testPresets",
-    "package": "packagePresets",
-    "workflow": "workflowPresets",
-}
 
 
 class CMakePresets:
@@ -45,34 +38,34 @@ class CMakePresets:
         logger.debug(f"Successfully parsed {len(self.parser.loaded_files)} preset files")
 
         # Log number of presets found
-        for preset_type, key in PRESET_TYPES.items():
+        for preset_type, key in PRESET_MAP.items():
             count = sum(1 for _ in self._iter_presets_of_type(key))
             logger.debug(f"Found {count} {preset_type} presets")
 
     @property
     def configure_presets(self) -> list[dict[str, Any]]:
         """Get all configure presets across all loaded files."""
-        return list(self._iter_presets_of_type(PRESET_TYPES["configure"]))
+        return list(self._iter_presets_of_type(PRESET_MAP[CONFIGURE]))
 
     @property
     def build_presets(self) -> list[dict[str, Any]]:
         """Get all build presets across all loaded files."""
-        return list(self._iter_presets_of_type(PRESET_TYPES["build"]))
+        return list(self._iter_presets_of_type(PRESET_MAP[BUILD]))
 
     @property
     def test_presets(self) -> list[dict[str, Any]]:
         """Get all test presets across all loaded files."""
-        return list(self._iter_presets_of_type(PRESET_TYPES["test"]))
+        return list(self._iter_presets_of_type(PRESET_MAP[TEST]))
 
     @property
     def package_presets(self) -> list[dict[str, Any]]:
         """Get all package presets across all loaded files."""
-        return list(self._iter_presets_of_type(PRESET_TYPES["package"]))
+        return list(self._iter_presets_of_type(PRESET_MAP[PACKAGE]))
 
     @property
     def workflow_presets(self) -> list[dict[str, Any]]:
         """Get all workflow presets across all loaded files."""
-        return list(self._iter_presets_of_type(PRESET_TYPES["workflow"]))
+        return list(self._iter_presets_of_type(PRESET_MAP[WORKFLOW]))
 
     def _iter_presets_of_type(self, preset_type: str) -> Iterator[dict[str, Any]]:
         """
@@ -259,14 +252,14 @@ class CMakePresets:
         Returns:
             Dict mapping preset types to lists of dependent presets
         """
-        dependent_presets: dict[str, list[dict[str, Any]]] = {pt: [] for pt in PRESET_TYPES.values()}
+        dependent_presets: dict[str, list[dict[str, Any]]] = {pt: [] for pt in PRESET_MAP.values()}
 
         # Only configure presets can be referenced by other preset types
-        if preset_type != "configure":
+        if preset_type != CONFIGURE:
             return dependent_presets
 
-        for dep_type in ["build", "test", "package"]:
-            dep_type_key = PRESET_TYPES[dep_type]
+        for dep_type in [BUILD, TEST, PACKAGE]:
+            dep_type_key = PRESET_MAP[dep_type]
             for preset in getattr(self, f"{dep_type}_presets"):
                 # Direct dependency through configurePreset field
                 if preset.get("configurePreset") == preset_name:
@@ -296,7 +289,7 @@ class CMakePresets:
         for configure_preset in self.configure_presets:
             name = configure_preset.get("name")
             if name:
-                dependent_presets: dict[str, list[dict[str, Any]]] = self.get_dependent_presets("configure", name)
+                dependent_presets: dict[str, list[dict[str, Any]]] = self.get_dependent_presets(CONFIGURE, name)
                 tree[name] = {"preset": configure_preset, "dependents": dependent_presets}
 
         return tree
@@ -335,9 +328,9 @@ class CMakePresets:
 
         # Return all related presets (build, test, package)
         return {
-            "build": dependent_presets.get("buildPresets", []),
-            "test": dependent_presets.get("testPresets", []),
-            "package": dependent_presets.get("packagePresets", []),
+            BUILD: dependent_presets.get("buildPresets", []),
+            TEST: dependent_presets.get("testPresets", []),
+            PACKAGE: dependent_presets.get("packagePresets", []),
         }
 
     def resolve_macro_values(self, preset_type: str, preset_name: str, env: dict[str, str] | None = None) -> dict[str, Any]:
@@ -380,7 +373,7 @@ class CMakePresets:
         """Get mapping of preset names to their containing file paths."""
         file_paths: dict[str, str] = {}
         for filepath, file_data in self.parser.loaded_files.items():
-            for preset_key in PRESET_TYPES.values():
+            for preset_key in PRESET_MAP.values():
                 if preset_key not in file_data:
                     continue
                 for preset in file_data[preset_key]:
