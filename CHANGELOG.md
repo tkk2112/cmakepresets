@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.4.0](https://github.com/tkk2112/cmakepresets/compare/v0.3.1...v0.4.0) (2025-03-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* update doc and add it to tests for the api doctest examples
+
+### Features
+
+* add CMakeRoot ([f9979c6](https://github.com/tkk2112/cmakepresets/commit/f9979c6c3f1fae3c52e2f5b0a131de07bad7e3ec))
+* add constants ([c13ead1](https://github.com/tkk2112/cmakepresets/commit/c13ead11c491df2196ee460cf8af0a3ea2f69432))
+* add utils ([read|write]_file_text) ([de731e6](https://github.com/tkk2112/cmakepresets/commit/de731e6a5beee59e23eeb8d1e83b221753dbd706))
+* improve pseudo macro resolver ([374dc5a](https://github.com/tkk2112/cmakepresets/commit/374dc5a27fb1d053c6be6a5f34c8477e0eb9920f))
+* update CMakePresets_json to also be a context_manager ([1c3f4a6](https://github.com/tkk2112/cmakepresets/commit/1c3f4a64cdba06cbb9d82fa5677c3f005fbe98aa))
+* update doc and add it to tests for the api doctest examples ([649d8f8](https://github.com/tkk2112/cmakepresets/commit/649d8f82d92608ba4c1d005e9759f9afdbbba93c))
+* update to use CMakeRoot ++ ([2737dc1](https://github.com/tkk2112/cmakepresets/commit/2737dc19394009c9c7024ad8d093205ffe79cf9d))
+
+
+### Bug Fixes
+
+* change a couple of regular print to console.print ([09c0b70](https://github.com/tkk2112/cmakepresets/commit/09c0b709a4ee6f98ccf529b880db894e55177a48))
+
 ## [0.3.1](https://github.com/tkk2112/cmakepresets/compare/v0.3.0...v0.3.1) (2025-03-19)
 
 
