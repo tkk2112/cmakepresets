@@ -24,31 +24,6 @@ CMakePresets is a utility that helps you inspect and work with CMake preset conf
 pip install cmakepresets
 ```
 
-## Python API
-
-```python
-from cmakepresets import CMakePresets
-
-# Load presets from a file or directory
-presets = CMakePresets("path/to/CMakePresets.json")
-# or
-presets = CMakePresets("path/to/project/directory")
-
-# Access preset data
-configure_presets = presets.configure_presets
-build_presets = presets.build_presets
-
-# Get preset by name
-preset = presets.get_preset_by_name("configure", "my-preset")
-
-# Get preset tree showing hierarchical relationships
-preset_tree = presets.get_preset_tree()
-
-# Get flattened preset with all inherited properties resolved
-flattened = presets.flatten_preset("configure", "my-preset")
-```
-
-
 ## CLI Usage
 
 ### List all presets
@@ -88,4 +63,110 @@ cmakepresets --file CMakePresets.json related my-configure-preset --type build
 
 ```bash
 cmakepresets --file CMakePresets.json related my-configure-preset --plain
+```
+
+## Python API
+
+```python
+>>> # Set up the test environment (only needed for doctest)
+>>> import os
+>>> import sys
+>>> sys.path.insert(0, '.')
+>>> # Create a proper test environment
+>>> from tests.decorators import CMakePresets_json
+>>>
+>>> # Create test preset content
+>>> preset_content = '''{
+...   "version": 4,
+...   "cmakeMinimumRequired": {"major": 3, "minor": 23, "patch": 0},
+...   "configurePresets": [
+...     {
+...       "name": "base",
+...       "generator": "Ninja",
+...       "binaryDir": "${sourceDir}/build/${presetName}",
+...       "hidden": true
+...     },
+...     {
+...       "name": "my-config",
+...       "inherits": "base",
+...       "cacheVariables": {
+...         "CMAKE_BUILD_TYPE": "Debug"
+...       }
+...     }
+...   ],
+...   "buildPresets": [
+...     {
+...       "name": "my-build",
+...       "configurePreset": "my-config"
+...     }
+...   ]
+... }'''
+>>>
+>>> # Set up the test environment
+>>> patcher = CMakePresets_json(preset_content)
+>>> test_env = patcher.__enter__()  # This creates a fake filesystem with CMakePresets.json
+
+>>> ###################################################################
+>>> # Now we can import and use CMakePresets normally as in real code #
+>>> ###################################################################
+>>> # Python API Examples
+>>> ####
+>>> from cmakepresets import CMakePresets
+>>> from cmakepresets.constants import CONFIGURE, PACKAGE
+
+>>> # Load presets from a file (uses the fake filesystem)
+>>> presets = CMakePresets("CMakePresets.json")
+>>> print(len(presets.configure_presets))
+2
+
+
+>>> # Or load from a project directory
+>>> presets = CMakePresets(".")
+>>> print(len(presets.build_presets))
+1
+
+
+>>> # Access preset collections
+>>> configure_presets = presets.configure_presets
+>>> # List names of all configure presets
+>>> [preset["name"] for preset in configure_presets]
+['base', 'my-config']
+
+
+>>> # Get related prests to the configurePreset 'my-config'
+>>> related = presets.find_related_presets("my-config")
+>>> print(related)
+{'build': [{'name': 'my-build', 'configurePreset': 'my-config'}], 'test': [], 'package': []}
+
+>>> # Get related packagePrests to 'my-config'
+>>> related = presets.find_related_presets("my-config", PACKAGE)
+>>> print(len(related[PACKAGE]))
+0
+
+
+>>> # Get a specific preset by name
+>>> my_config = presets.get_preset_by_name(CONFIGURE, "my-config")
+>>> my_config["name"]
+'my-config'
+
+>>> # Get flattened preset with all inherited properties resolved
+>>> flattened = presets.flatten_preset(CONFIGURE, "my-config")
+
+>>> # Print the original preset
+>>> print(my_config)
+{'name': 'my-config', 'inherits': 'base', 'cacheVariables': {'CMAKE_BUILD_TYPE': 'Debug'}}
+
+>>> # Compared to flattened
+>>> print(flattened)
+{'name': 'my-config', 'generator': 'Ninja', 'binaryDir': '${sourceDir}/build/${presetName}', 'cacheVariables': {'CMAKE_BUILD_TYPE': 'Debug'}}
+
+>>> # Get flattened preset with "pseudo" resolved macros
+>>> resolved = presets.resolve_macro_values(CONFIGURE, "my-config")
+>>> print(resolved)
+{'name': 'my-config', 'generator': 'Ninja', 'binaryDir': '/home/user/project/build/my-config', 'cacheVariables': {'CMAKE_BUILD_TYPE': 'Debug'}}
+
+
+>>> # Clean up test environment (important to avoid resource leaks)
+>>> patcher.__exit__(None, None, None)
+
 ```
