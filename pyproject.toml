@@ -73,22 +73,19 @@ disallow_incomplete_defs = true
 ignore_missing_imports = true
 implicit_optional = true
 
-[tool.uv.sources]
-pyproject-aliases = { git = "https://github.com/tkk2112/pyproject_aliases.git" }
-
 [dependency-groups]
 dev = [
     "hatch>=1.14.0",
     "mypy>=1.15.0",
     "pre-commit>=4.1.0",
     "pyfakefs>=5.7.4",
-    "pyproject-aliases",
     "pytest-cov>=6.0.0",
     "pytest>=8.3.5",
     "types-jsonschema>=4.23.0.20241208",
     "types-requests>=2.32.0.20250306",
     "pytest-random-order>=1.1.1",
     "no-implicit-optional>=1.4",
+    "pyproject-aliases>=0.2.0",
 ]
 
 [tool.aliases]
