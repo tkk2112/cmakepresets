@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/tkk2112/cmakepresets/compare/v0.4.0...v0.4.1) (2025-06-10)
+
+
+### Bug Fixes
+
+* **deps:** update dependency requests to v2.32.4 [security] ([0df49b4](https://github.com/tkk2112/cmakepresets/commit/0df49b445788ca01613a11d453a3b2cb3a10dbc5))
+
 ## [0.4.0](https://github.com/tkk2112/cmakepresets/compare/v0.3.1...v0.4.0) (2025-03-26)
 
 
