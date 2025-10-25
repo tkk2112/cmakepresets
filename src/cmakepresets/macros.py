@@ -59,7 +59,7 @@ class MacroResolver:
         return resolved_preset
 
     def _process_cache_variables(self, preset: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
-        """Process cache variables and update the context with overrides."""
+        """Resolve cacheVariables and update context."""
         if "cacheVariables" not in preset:
             return context
 
@@ -86,7 +86,7 @@ class MacroResolver:
         return updated_context
 
     def _process_remaining_values(self, preset: dict[str, Any], context: dict[str, Any]) -> None:
-        """Process all remaining values in the preset using the updated context."""
+        """Resolve remaining preset values."""
         for key, value in list(preset.items()):
             if key != "cacheVariables":  # Skip cache variables as they were already resolved
                 preset[key] = self._resolve_recursive(value, context)
