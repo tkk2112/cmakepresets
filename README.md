@@ -114,6 +114,11 @@ cmakepresets --file CMakePresets.json related my-configure-preset --plain
 >>> from cmakepresets import CMakePresets
 >>> from cmakepresets.constants import CONFIGURE, PACKAGE
 
+>>> # Silence library debug output in doctest
+>>> import logging
+>>> import cmakepresets
+>>> logging.getLogger(cmakepresets.__name__).setLevel(logging.WARNING)
+
 >>> # Load presets from a file (uses the fake filesystem)
 >>> presets = CMakePresets("CMakePresets.json")
 >>> print(len(presets.configure_presets))

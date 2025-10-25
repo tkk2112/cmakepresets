@@ -150,4 +150,20 @@ class CMakePresets_json:
             raise ValueError(f"Invalid JSON in test content for {filepath}: {e}")
 
         # Create the file
+        # If a file already exists at this path in the fake filesystem,
+        # remove it before creating the new one. Some pyfakefs versions
+        # raise FileExistsError when attempting to recreate files; this
+        # makes the helper idempotent and compatible across Python
+        # / pyfakefs versions.
+        try:
+            if fs.exists(filepath):
+                # remove_object is the FakeFilesystem API to delete
+                # entries (files or dirs) from the fake tree.
+                fs.remove_object(filepath)
+        except Exception:
+            # In case the fs implementation doesn't provide exists/remove
+            # semantics the plain create_file will be attempted and any
+            # resulting error will surface normally.
+            pass
+
         fs.create_file(filepath, contents=formatted_content)
