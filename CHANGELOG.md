@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.5.0](https://github.com/tkk2112/cmakepresets/compare/v0.4.1...v0.5.0) (2025-10-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* fixes instability in the testsuite on certain platforms
+
+### Bug Fixes
+
+* fixes instability in the testsuite on certain platforms ([791a0b9](https://github.com/tkk2112/cmakepresets/commit/791a0b90e8d303770468cbece1212a63e42ee2d7))
+
 ## [0.4.1](https://github.com/tkk2112/cmakepresets/compare/v0.4.0...v0.4.1) (2025-06-10)
 
 
