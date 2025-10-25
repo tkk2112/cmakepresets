@@ -27,7 +27,7 @@ def create_parser() -> argparse.ArgumentParser:
     # Verbosity
     parser.add_argument("--verbose", "-v", action="count", default=0, help="Increase verbosity (can be used multiple times)")
 
-    # Subcommands for different operations
+    # Subcommands
     subparsers = parser.add_subparsers(dest="command", help="Command to execute")
 
     # List command

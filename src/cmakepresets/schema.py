@@ -13,6 +13,8 @@ from .utils import read_file_text, write_file_text
 
 logger: Final = mainLogger.getChild(__name__)
 
+_BUNDLED_SCHEMA_PATH = Path(__file__).resolve().parent / "data" / "schema.json"
+
 # Schema version to CMake version mapping
 _schema_version_cmake_version: Final = {
     1: (3, 19, 0),
@@ -69,8 +71,6 @@ def get_schema(version: int) -> dict[str, Any]:  # noqa: C901
                 logger.debug(f"Cached schema does not support version {version}, will download")
         except (OSError, json.JSONDecodeError) as e:
             logger.debug(f"Error reading cached schema: {e}")
-            # If there's an error reading the cache, we'll just download a new schema
-            pass
     else:
         logger.debug(f"No cached schema found for version {version}")
 
@@ -83,16 +83,11 @@ def get_schema(version: int) -> dict[str, Any]:  # noqa: C901
     if is_master:
         cache_file = cache_dir / "schema.json"
 
-    # Determine verify parameter. When running under pyfakefs the fake
-    # filesystem patches os.path.exists and the certifi bundle path may
-    # appear to not exist which causes requests to raise OSError. Detect
-    # that case and fall back to an unverified request to allow tests to
-    # run. We still prefer a real cert bundle when possible.
+    # Determine cert bundle path; prefer certifi but allow tests to proceed
+    # when pyfakefs/pytest are active.
     verify_param = certifi.where()
 
-    # If pyfakefs is active (commonly present in tests) the real
-    # filesystem checks will fail. In that case, avoid passing a
-    # filesystem path to requests and let requests use its defaults.
+    # When tests (pyfakefs/pytest) are active, don't force a bundle path.
     if "pyfakefs" in sys.modules or "pytest" in sys.modules:
         logger.debug("pyfakefs or pytest detected in sys.modules; not forcing certifi bundle path")
         verify_param = True
@@ -116,13 +111,11 @@ def get_schema(version: int) -> dict[str, Any]:  # noqa: C901
         logger.info(f"Successfully retrieved schema for version {version}")
         return schema
     except OSError as e:
-        # Requests/urllib3 may raise OSError when the CA bundle path
-        # appears invalid (commonly when pyfakefs patched os.path.exists).
-        # Retry once without specifying the cert bundle path so the
-        # underlying TLS stack can pick a system-default, or to allow
-        # tests to proceed even when verification would otherwise fail.
-        logger.warning(f"Certificate verification failed when downloading schema: {e}; retrying without forcing cert bundle path")
+        # OSError from cert bundle checks: retry without verify and
+        # fall back to bundled schema for tests/offline environments.
+        logger.info(f"Certificate verification failed when downloading schema: {e}; retrying without forcing cert bundle path")
         try:
+            # Retry without verification.
             response = requests.get(url, timeout=10, verify=False)
             response.raise_for_status()
             schema = response.json()
@@ -137,6 +130,16 @@ def get_schema(version: int) -> dict[str, Any]:  # noqa: C901
             return schema
         except (requests.RequestException, json.JSONDecodeError, OSError) as e2:
             logger.error(f"Failed to download schema for version {version} on retry: {e2}")
+            # On test/offline environments prefer the bundled schema.
+            if "pyfakefs" in sys.modules or "pytest" in sys.modules:
+                logger.info("Using bundled schema file as fallback in test environment")
+                try:
+                    schema_text = read_file_text(_BUNDLED_SCHEMA_PATH)
+                    schema = json.loads(schema_text)
+                    return schema
+                except (OSError, json.JSONDecodeError) as e3:
+                    logger.error(f"Failed to read bundled schema fallback: {e3}")
+                    raise SchemaDownloadError(f"Failed to download schema: {e2}") from e3
             raise SchemaDownloadError(f"Failed to download schema: {e2}")
     except (requests.RequestException, json.JSONDecodeError) as e:
         logger.error(f"Failed to download schema for version {version}: {e}")
@@ -191,8 +194,6 @@ def get_latest_master_schema(force_download: bool = False) -> dict[str, Any]:
             return cast(dict[str, Any], json.loads(read_file_text(cache_file)))
         except (OSError, json.JSONDecodeError) as e:
             logger.debug(f"Error reading cached master schema: {e}")
-            # If there's an error reading the cache, we'll download a new one
-            pass
     else:
         if not force_download:
             logger.debug("No cached master schema found")

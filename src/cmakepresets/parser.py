@@ -45,7 +45,7 @@ class Parser:
         self.loaded_files = {}
         self.processed_files = set()
 
-        # Start with the main file using its relative name
+        # Load main file
         self._load_file(cast(Path, self.root.presets_file))
         main_rel = cast(Path, self.root.presets_file).name
         schema_version = self._validate_version_requirements(main_rel, self.loaded_files[main_rel])
@@ -56,11 +56,11 @@ class Parser:
         validate_json_against_schema(self.loaded_files[main_rel], schema)
         check_cmake_version_for_schema(schema_version, self.loaded_files[main_rel].get("cmakeMinimumRequired", {}))
 
-        # Check if there's a user presets file (only for CMakePresets.json files)
+        # Load user presets if present
         if self.root.has_user_presets:
             self._load_file(cast(Path, self.root.user_presets_file))
 
-        # Process includes recursively (using relative paths)
+        # Process includes recursively
         logger.debug("Processing includes recursively")
         self._process_includes()
 
