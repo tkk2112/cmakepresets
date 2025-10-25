@@ -1,5 +1,5 @@
 [//]: # (x-release-please-start-version)
-# CMakePresets 0.4.1
+# CMakePresets 0.5.0
 [//]: # (x-release-please-end)
 
 
